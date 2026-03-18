@@ -309,6 +309,9 @@ function connectSocket() {
   });
 
   socket.on("game:hand", ({ hand }) => {
+    // If a late `game:hand` arrives after the game is finished,
+    // ignore it so the UI doesn't get stuck back in "pick a card".
+    if (state.finished) return;
     if (Array.isArray(hand)) {
       hideRoundPrompt();
       // Preserve hand order: server appends the new draw card each round.
