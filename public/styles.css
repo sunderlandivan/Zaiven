@@ -279,7 +279,9 @@ body{
   width: 92px;
   height: 128px;
   border-radius: 16px;
-  background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+  background:
+    url('/card-template.png') center/cover no-repeat,
+    linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
   border: 1px solid rgba(255,255,255,.10);
   box-shadow: 0 12px 26px rgba(0,0,0,.35);
   position:relative;
@@ -299,35 +301,37 @@ body{
   cursor:not-allowed;
   transform:none;
 }
-.card-face{
-  font-size: 34px;
-  font-weight: 900;
-  letter-spacing: .3px;
-  color: rgba(232,236,246,.96);
-  text-shadow: 0 0 18px rgba(11,60,255,.22);
-}
-.corner{
+.card-num{
   position:absolute;
-  font-size: 12px;
-  color: rgba(154,164,182,.95);
+  left:50%;
+  bottom: 10px;
+  transform: translateX(-50%);
+  font-size: 26px;
+  font-weight: 950;
+  letter-spacing: .2px;
+  color: rgba(232,236,246,.98);
+  text-shadow: 0 0 18px rgba(11,60,255,.35);
 }
-.corner.tl{top:10px; left:10px}
-.corner.br{bottom:10px; right:10px}
 
 .mini-card{
   width: 64px;
   height: 86px;
   border-radius: 14px;
-  background: #000;
+  background:
+    url('/card-template.png') center/cover no-repeat;
   border: 1px solid rgba(255,255,255,.08);
-  display:grid;
-  place-items:center;
   box-shadow: 0 14px 26px rgba(0,0,0,.40);
+  position:relative;
 }
-.mini-card .mini-face{
-  font-weight: 900;
-  font-size: 20px;
-  color: rgba(232,236,246,.95);
+.mini-card .mini-num{
+  position:absolute;
+  left:50%;
+  bottom: 8px;
+  transform: translateX(-50%);
+  font-weight: 1000;
+  font-size: 18px;
+  color: rgba(232,236,246,.98);
+  text-shadow: 0 0 14px rgba(11,60,255,.32);
 }
 .mini-card.back{
   background: #000;

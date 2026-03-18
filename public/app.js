@@ -179,10 +179,10 @@ function miniCard(text, { showFace }) {
   const el = document.createElement("div");
   el.className = `mini-card ${showFace ? "" : "back"}`.trim();
   if (showFace && text) {
-    const face = document.createElement("div");
-    face.className = "mini-face";
-    face.textContent = text;
-    el.appendChild(face);
+    const num = document.createElement("div");
+    num.className = "mini-num";
+    num.textContent = text;
+    el.appendChild(num);
   }
   return el;
 }
@@ -192,19 +192,10 @@ function cardEl(value, disabled) {
   el.className = `card ${disabled ? "disabled" : ""}`.trim();
   el.tabIndex = disabled ? -1 : 0;
 
-  const tl = document.createElement("div");
-  tl.className = "corner tl";
-  tl.textContent = String(value);
-  const br = document.createElement("div");
-  br.className = "corner br";
-  br.textContent = String(value);
-  const face = document.createElement("div");
-  face.className = "card-face";
-  face.textContent = String(value);
-
-  el.appendChild(tl);
-  el.appendChild(br);
-  el.appendChild(face);
+  const num = document.createElement("div");
+  num.className = "card-num";
+  num.textContent = String(value);
+  el.appendChild(num);
 
   const pick = () => {
     if (disabled || selectionLocked) return;
