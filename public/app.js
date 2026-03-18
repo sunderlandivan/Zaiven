@@ -49,6 +49,9 @@ let myReady = false;
 const CARD_ART = {
   1: "/card-art/1.png",
   2: "/card-art/2.png",
+  3: "/card-art/3.png",
+  5: "/card-art/5.png",
+  10: "/card-art/10.png",
   // Add more mappings here as you provide additional images.
 };
 const CARD_ART_FALLBACK = "/card-template.png";
