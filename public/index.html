@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Neon Playmat • 4P High Card</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <div class="bg-glow"></div>
+      <div class="topbar">
+        <div class="brand">
+          <div class="dot"></div>
+          <div>
+            <div class="brand-title">Neon Playmat</div>
+            <div class="brand-sub">4-player • 3 rounds • pick highest</div>
+          </div>
+        </div>
+        <div class="top-actions">
+          <button id="readyBtn" class="btn primary" disabled>Ready</button>
+          <button id="restartBtn" class="btn subtle hidden" type="button">Restart</button>
+          <div class="room">
+          <div class="room-line">
+            <span class="label">Room</span>
+            <span id="roomCode" class="value">—</span>
+          </div>
+          <button id="copyRoom" class="btn subtle" disabled>Copy</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="mat">
+        <div class="neon-frame"></div>
+
+        <div class="seat seat-top" data-seat="top">
+          <div class="seat-header">
+            <div class="name" id="name-top">Waiting…</div>
+            <div class="score" id="score-top">0</div>
+          </div>
+          <div class="status" id="status-top"></div>
+          <div class="picked" id="picked-top"></div>
+        </div>
+
+        <div class="seat seat-left" data-seat="left">
+          <div class="seat-header">
+            <div class="name" id="name-left">Waiting…</div>
+            <div class="score" id="score-left">0</div>
+          </div>
+          <div class="status" id="status-left"></div>
+          <div class="picked" id="picked-left"></div>
+        </div>
+
+        <div class="seat seat-right" data-seat="right">
+          <div class="seat-header">
+            <div class="name" id="name-right">Waiting…</div>
+            <div class="score" id="score-right">0</div>
+          </div>
+          <div class="status" id="status-right"></div>
+          <div class="picked" id="picked-right"></div>
+        </div>
+
+        <div class="seat seat-bottom" data-seat="bottom">
+          <div class="seat-header">
+            <div class="name" id="name-bottom">Waiting…</div>
+            <div class="score" id="score-bottom">0</div>
+          </div>
+          <div class="status" id="status-bottom"></div>
+          <div class="picked" id="picked-bottom"></div>
+        </div>
+
+        <div class="center">
+          <div class="round">
+            <div class="round-title">Round</div>
+            <div class="round-value"><span id="roundNow">—</span>/<span id="roundTotal">3</span></div>
+          </div>
+          <div id="banner" class="banner hidden"></div>
+          <div class="hint">
+            Pick 1 card each round. After the round, draw 1 more card.
+          </div>
+        </div>
+
+        <div class="hand-wrap">
+          <div class="hand-header">
+            <div class="hand-title">Your hand</div>
+            <div class="hand-sub" id="handSub">Waiting for game…</div>
+          </div>
+          <div id="hand" class="hand"></div>
+        </div>
+      </div>
+
+    <div id="roundPrompt" class="round-prompt hidden" aria-live="polite">
+      <div class="round-prompt-inner">
+        <div id="roundPromptText" class="round-prompt-text"></div>
+      </div>
+    </div>
+
+    <div id="gameWinPrompt" class="win-prompt hidden" aria-live="polite">
+      <div class="win-prompt-inner">
+        <div id="gameWinPromptText" class="win-prompt-text"></div>
+      </div>
+    </div>
+
+      <div id="modal" class="modal">
+        <div class="modal-card">
+          <div class="modal-title">Join a session</div>
+          <div class="modal-sub">
+            Enter your name, then pick a seat. Share the room code with friends (4 players).
+          </div>
+
+          <div class="field">
+            <label>Name</label>
+            <input id="nameInput" maxlength="18" placeholder="e.g. Ivy" />
+          </div>
+
+          <div class="field">
+            <label>Room code (optional)</label>
+            <input id="roomInput" maxlength="12" placeholder="Leave blank to create" />
+          </div>
+
+          <div id="seatStep" class="seat-step hidden">
+            <div class="seat-step-title">Choose your seat</div>
+            <div class="seat-grid">
+              <button class="seat-btn" data-seat="top" type="button">TOP</button>
+              <button class="seat-btn" data-seat="left" type="button">LEFT</button>
+              <button class="seat-btn" data-seat="right" type="button">RIGHT</button>
+              <button class="seat-btn" data-seat="bottom" type="button">BOTTOM</button>
+            </div>
+          </div>
+
+          <div class="row">
+            <button id="joinBtn" class="btn primary">Next</button>
+            <button id="backBtn" class="btn subtle hidden" type="button">Back</button>
+            <button id="soloBtn" class="btn subtle" type="button">Auto-fill 4 bots (local)</button>
+          </div>
+
+          <div id="error" class="error hidden"></div>
+        </div>
+      </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
+
