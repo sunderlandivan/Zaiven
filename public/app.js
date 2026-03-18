@@ -46,6 +46,19 @@ let joinStage = "details"; // "details" | "seat"
 let requestedSeat = null; // "top"|"bottom"|"left"|"right"|null
 let myReady = false;
 
+const CARD_ART = {
+  1: "/card-art/1.png",
+  2: "/card-art/2.png",
+  // Add more mappings here as you provide additional images.
+};
+const CARD_ART_FALLBACK = "/card-template.png";
+
+function cardArtSrc(cardNumber) {
+  const n = Number(cardNumber);
+  if (!Number.isFinite(n)) return CARD_ART_FALLBACK;
+  return CARD_ART[n] || CARD_ART_FALLBACK;
+}
+
 const STORAGE_PLAYER_KEY = "tcg.playerKey";
 const STORAGE_LAST_ROOM = "tcg.lastRoom";
 const STORAGE_LAST_NAME = "tcg.lastName";
@@ -162,10 +175,10 @@ function renderSeats() {
     seatPickedEl[seat].innerHTML = "";
     const revealValue = state.revealPicks || seat === state.seat;
     if (revealValue && p.selected != null) {
-      seatPickedEl[seat].appendChild(miniCard(String(p.selected), { showFace: true }));
+      seatPickedEl[seat].appendChild(miniCard(p.selected, { showFace: true }));
     } else if (state.started) {
       // Face-down to keep other players' choices hidden until the reveal window.
-      seatPickedEl[seat].appendChild(miniCard("", { showFace: false }));
+      seatPickedEl[seat].appendChild(miniCard(null, { showFace: false }));
     }
   }
 }
@@ -175,19 +188,20 @@ function renderRound() {
   roundNow.textContent = state.round ? String(state.round) : "—";
 }
 
-function miniCard(text, { showFace }) {
+function miniCard(cardNumber, { showFace }) {
   const el = document.createElement("div");
   el.className = `mini-card ${showFace ? "" : "back"}`.trim();
-  const img = document.createElement("img");
-  img.className = "mini-art";
-  img.src = "/card-template.png";
-  img.alt = "";
-  img.draggable = false;
-  el.appendChild(img);
-  if (showFace && text) {
+  if (showFace && cardNumber != null) {
+    const img = document.createElement("img");
+    img.className = "mini-art";
+    img.src = cardArtSrc(cardNumber);
+    img.alt = "";
+    img.draggable = false;
+    el.appendChild(img);
+
     const num = document.createElement("div");
     num.className = "mini-num";
-    num.textContent = text;
+    num.textContent = String(cardNumber);
     el.appendChild(num);
   }
   return el;
@@ -200,7 +214,7 @@ function cardEl(value, disabled) {
 
   const img = document.createElement("img");
   img.className = "card-art";
-  img.src = "/card-template.png";
+  img.src = cardArtSrc(value);
   img.alt = "";
   img.draggable = false;
   el.appendChild(img);
