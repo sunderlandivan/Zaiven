@@ -178,6 +178,12 @@ function renderRound() {
 function miniCard(text, { showFace }) {
   const el = document.createElement("div");
   el.className = `mini-card ${showFace ? "" : "back"}`.trim();
+  const img = document.createElement("img");
+  img.className = "mini-art";
+  img.src = "/card-template.png";
+  img.alt = "";
+  img.draggable = false;
+  el.appendChild(img);
   if (showFace && text) {
     const num = document.createElement("div");
     num.className = "mini-num";
@@ -191,6 +197,13 @@ function cardEl(value, disabled) {
   const el = document.createElement("div");
   el.className = `card ${disabled ? "disabled" : ""}`.trim();
   el.tabIndex = disabled ? -1 : 0;
+
+  const img = document.createElement("img");
+  img.className = "card-art";
+  img.src = "/card-template.png";
+  img.alt = "";
+  img.draggable = false;
+  el.appendChild(img);
 
   const num = document.createElement("div");
   num.className = "card-num";
