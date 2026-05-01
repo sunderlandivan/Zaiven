@@ -5,6 +5,8 @@ import { getStocksData, getStockDetail } from "./stocks.js";
 import { getAllNewsFeeds, fetchNewsFeed, ZEE_NEWS_TOPICS } from "./news.js";
 import { getMusicLibrary, createMusicStreamHandler } from "./music.js";
 import { createAudiImageHandler, getAudiImagePath } from "./audi.js";
+import { getYoutubeVideoFeed } from "./youtube.js";
+import { getSystemStats } from "./system.js";
 import {
   getZeeGmailAuthStartUrl,
   handleZeeGmailAuthCallback,
@@ -90,6 +92,24 @@ export function createZeeRouter() {
   });
 
   router.get("/music/stream", createMusicStreamHandler());
+
+  router.get("/youtube/videos", async (_req, res) => {
+    try {
+      const data = await getYoutubeVideoFeed();
+      res.json({ ok: true, data });
+    } catch (e) {
+      res.status(500).json({ ok: false, error: e.message || String(e) });
+    }
+  });
+
+  router.get("/system/stats", (_req, res) => {
+    try {
+      const data = getSystemStats();
+      res.json({ ok: true, data });
+    } catch (e) {
+      res.status(500).json({ ok: false, error: e.message || String(e) });
+    }
+  });
 
   router.get("/audi/status", (_req, res) => {
     const filePath = getAudiImagePath();

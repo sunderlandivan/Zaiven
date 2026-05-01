@@ -201,7 +201,14 @@ function decodeB64Url(s) {
 }
 
 function htmlToText(html) {
-  return String(html || "")
+  const cleaned = String(html || "")
+    .replace(/<\s*script\b[^>]*>[\s\S]*?<\s*\/\s*script\s*>/gi, " ")
+    .replace(/<\s*style\b[^>]*>[\s\S]*?<\s*\/\s*style\s*>/gi, " ")
+    .replace(/<\s*head\b[^>]*>[\s\S]*?<\s*\/\s*head\s*>/gi, " ")
+    .replace(/<\s*svg\b[^>]*>[\s\S]*?<\s*\/\s*svg\s*>/gi, " ")
+    .replace(/<!--[\s\S]*?-->/g, " ");
+
+  const text = cleaned
     .replace(/<\s*br\s*\/?>/gi, "\n")
     .replace(/<\/\s*(p|div|tr|li|h1|h2|h3|h4|h5|h6)\s*>/gi, "\n")
     .replace(/<[^>]+>/g, " ")
@@ -213,6 +220,17 @@ function htmlToText(html) {
     .replace(/[ \t]+/g, " ")
     .replace(/\n{2,}/g, "\n")
     .trim();
+  // If boilerplate still leaks (e.g. CSS selectors in plain text), trim to first natural sentence block.
+  const lines = text
+    .split("\n")
+    .map((x) => x.trim())
+    .filter(Boolean)
+    .filter(
+      (line) =>
+        !/^[.#]?[a-z0-9_-]+\s*\{/.test(line) &&
+        !/^(font-|margin|padding|line-height|color|background|border|display|width|max-width|min-width)\s*:/i.test(line)
+    );
+  return lines.join("\n").trim();
 }
 
 function extractBodyFromPayload(payload) {

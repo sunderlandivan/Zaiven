@@ -1,6 +1,6 @@
 const LABELS = {
   nvidia: "NVIDIA",
-  star_citizen: "Star Citizen",
+  star_citizen: "Perris, CA Local",
   steam: "Steam / PC",
   world: "World / macro",
 };

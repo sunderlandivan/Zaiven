@@ -24,6 +24,10 @@ let analyser = null;
 /** @type {MediaStreamAudioSourceNode | null} */
 let micSource = null;
 let levelRaf = 0;
+/** @type {string[]} */
+let pendingPrompts = [];
+/** @type {Set<string>} */
+let handledCallIds = new Set();
 
 export function setVoiceStatus(fn) {
   onStatus = fn;
@@ -183,6 +187,22 @@ async function executeTool(name, args) {
           lines: msgs.map((m) => `${m.subject} - ${m.from}`),
         };
       }
+      case "open_youtube_video": {
+        const idx = Math.max(1, Math.min(8, Number(args.index ?? 1)));
+        registry.openModule("youtube");
+        registry.focusModule("youtube");
+        const result = bus.emit("youtube:open", { index: idx });
+        return result || { ok: true, index: idx };
+      }
+      case "pause_youtube_video":
+        bus.emit("youtube:pause", {});
+        return { ok: true };
+      case "get_system_stats": {
+        const res = await fetch("/api/zee/system/stats");
+        const j = await res.json();
+        if (!j.ok) return { ok: false, error: j.error };
+        return j.data || {};
+      }
       default:
         return { ok: false, error: `unknown tool ${name}` };
     }
@@ -206,6 +226,103 @@ function maybeCaptureTranscript(msg) {
   }
 }
 
+function extractTranscriptText(msg) {
+  return String(
+    msg?.transcript ||
+      msg?.delta ||
+      msg?.text ||
+      msg?.item?.content?.[0]?.transcript ||
+      msg?.item?.content?.[0]?.text ||
+      ""
+  ).trim();
+}
+
+function maybeRunDirectVoiceCommand(msg) {
+  const t = String(msg?.type || "");
+  // Only use user input-audio transcription events for deterministic local shortcuts.
+  if (!/^conversation\.item\.input_audio_transcription/i.test(t)) return false;
+  const spoken = extractTranscriptText(msg).toLowerCase();
+  if (!spoken) return false;
+
+  if (/\bclose\b/.test(spoken) && /\b(it|that|this|window|video|stock|spotlight|foreground|drill)\b/.test(spoken)) {
+    if (/\b(video|youtube)\b/.test(spoken)) {
+      bus.emit("spotlight:close", { target: "youtube" });
+      status("Zee: closing video window");
+    } else if (/\b(stock|nvidia|nvda)\b/.test(spoken)) {
+      bus.emit("spotlight:close", { target: "stock" });
+      status("Zee: closing stock window");
+    } else {
+      bus.emit("spotlight:close", { target: "all" });
+      status("Zee: closing spotlight");
+    }
+    return true;
+  }
+
+  if (
+    /\b(nvda|nvidia)\b/.test(spoken) &&
+    (/(open|show|spotlight|foreground|drill)/i.test(spoken) || /\bnvidia\s+stock\b|\bnvda\s+stock\b/i.test(spoken))
+  ) {
+    registry.openModule("stocks");
+    registry.focusModule("stocks");
+    bus.emit("stock:spotlight", { symbol: "NVDA" });
+    status("Zee: opening NVDA spotlight");
+    return true;
+  }
+
+  if ((/\b(pause|stop)\b/.test(spoken) && /\b(video|youtube)\b/.test(spoken)) || /\bpause\b.*\bthis\b.*\bvideo\b/.test(spoken)) {
+    bus.emit("youtube:pause", {});
+    status("Zee: pausing video");
+    return true;
+  }
+
+  if (/\b(youtube|video)\b/.test(spoken) && /(open|show|play|first|1st|one)/i.test(spoken)) {
+    registry.openModule("youtube");
+    registry.focusModule("youtube");
+    const idxMatch = spoken.match(/\b(?:video\s*)?(\d+)\b/);
+    const idx = idxMatch ? Math.max(1, Math.min(8, Number(idxMatch[1]))) : 1;
+    bus.emit("youtube:open", { index: idx });
+    status(`Zee: opening YouTube video ${idx}`);
+    return true;
+  }
+  return false;
+}
+
+async function handleFunctionCalls(channel, calls) {
+  if (!Array.isArray(calls) || !calls.length) return false;
+  let handledAny = false;
+  status("Zee: running tools...");
+  for (const item of calls) {
+    const callId = String(item?.call_id || "");
+    const name = String(item?.name || "");
+    if (!callId || !name) continue;
+    if (handledCallIds.has(callId)) continue;
+    handledCallIds.add(callId);
+    let args = {};
+    try {
+      args = JSON.parse(String(item.arguments || "{}"));
+    } catch {
+      args = {};
+    }
+    const result = await executeTool(name, args);
+    channel.send(
+      JSON.stringify({
+        type: "conversation.item.create",
+        item: {
+          type: "function_call_output",
+          call_id: callId,
+          output: JSON.stringify(result ?? {}),
+        },
+      })
+    );
+    handledAny = true;
+  }
+  if (handledAny) {
+    channel.send(JSON.stringify({ type: "response.create" }));
+    status("Zee: listening");
+  }
+  return handledAny;
+}
+
 /**
  * @param {RTCDataChannel} channel
  */
@@ -218,36 +335,20 @@ function wireDataChannel(channel) {
       return;
     }
     maybeCaptureTranscript(msg);
+    maybeRunDirectVoiceCommand(msg);
 
     const t = msg.type;
     if (t === "response.done") {
-      const out = msg.response?.output || [];
+      const out = Array.isArray(msg.response?.output) ? msg.response.output : [];
       const calls = out.filter((x) => x && x.type === "function_call");
-      if (!calls.length) return;
-      status("Zee: running tools...");
-      for (const item of calls) {
-        const callId = String(item.call_id || "");
-        const name = String(item.name || "");
-        let args = {};
-        try {
-          args = JSON.parse(String(item.arguments || "{}"));
-        } catch {
-          args = {};
-        }
-        const result = await executeTool(name, args);
-        channel.send(
-          JSON.stringify({
-            type: "conversation.item.create",
-            item: {
-              type: "function_call_output",
-              call_id: callId,
-              output: JSON.stringify(result ?? {}),
-            },
-          })
-        );
+      await handleFunctionCalls(channel, calls);
+    }
+    // Some realtime sessions emit function calls as output items before response.done.
+    if (t === "response.output_item.done") {
+      const item = msg.item;
+      if (item?.type === "function_call") {
+        await handleFunctionCalls(channel, [item]);
       }
-      channel.send(JSON.stringify({ type: "response.create" }));
-      status("Zee: listening");
     }
     if (t === "error") {
       status(`Zee error: ${msg.error?.message || JSON.stringify(msg.error || msg).slice(0, 120)}`);
@@ -297,7 +398,11 @@ async function fetchSdpAnswerViaServerRelay(offerSdp) {
 export function sendTextPrompt(text) {
   const prompt = String(text || "").trim();
   if (!prompt) return { ok: false, error: "empty prompt" };
-  if (!dc || dc.readyState !== "open") return { ok: false, error: "voice channel not ready" };
+  if (!dc) return { ok: false, error: "voice channel not ready" };
+  if (dc.readyState !== "open") {
+    pendingPrompts.push(prompt);
+    return { ok: true, queued: true };
+  }
   heard(prompt);
   status("Zee: processing command...");
   dc.send(
@@ -336,8 +441,16 @@ export async function connectZeeVoice() {
   }
 
   dc = pc.createDataChannel("oai-events");
+  handledCallIds = new Set();
   wireDataChannel(dc);
-  dc.addEventListener("open", () => status("Zee: voice link ready"));
+  dc.addEventListener("open", () => {
+    status("Zee: voice link ready");
+    if (pendingPrompts.length) {
+      const toSend = [...pendingPrompts];
+      pendingPrompts = [];
+      for (const p of toSend) sendTextPrompt(p);
+    }
+  });
   dc.addEventListener("close", () => status("Zee: voice channel closed"));
 
   const offer = await pc.createOffer();
@@ -375,6 +488,8 @@ export async function disconnectZeeVoice() {
     // ignore
   }
   dc = null;
+  pendingPrompts = [];
+  handledCallIds = new Set();
   try {
     pc?.getSenders().forEach((s) => s.track?.stop());
     pc?.close();

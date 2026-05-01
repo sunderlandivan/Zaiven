@@ -4,9 +4,11 @@ const FINNHUB_QUOTE = "https://finnhub.io/api/v1/quote";
 const FINNHUB_CANDLE = "https://finnhub.io/api/v1/stock/candle";
 const YAHOO_CHART = "https://query1.finance.yahoo.com/v8/finance/chart";
 const CANDLE_CACHE_TTL_MS = 10 * 60 * 1000;
+const FINNHUB_COOLDOWN_MS = 15 * 60 * 1000;
 
 /** @type {Map<string, { at: number, closes: number[] }>} */
 const candleCache = new Map();
+let finnhubBlockedUntil = 0;
 
 function getToken() {
   const t = String(process.env.STOCKS_API_KEY || process.env.FINNHUB_API_KEY || "").trim();
@@ -73,6 +75,16 @@ async function fetchFromYahoo(symbol) {
   };
 }
 
+function isFinnhubRateLimited(errorDetail) {
+  const s = String(errorDetail || "").toLowerCase();
+  return (
+    s.includes("api limit reached") ||
+    s.includes("rate limit") ||
+    s.includes("too many requests") ||
+    s.includes("remaining limit: 0")
+  );
+}
+
 function computeRsi(closes, period = 14) {
   if (!Array.isArray(closes) || closes.length < period + 1) return null;
   let gain = 0;
@@ -134,6 +146,8 @@ export async function getStocksData(symbols) {
   const token = getToken();
   const now = Math.floor(Date.now() / 1000);
   const from = now - 60 * 60 * 24 * 90;
+  const nowMs = Date.now();
+  const allowFinnhub = Boolean(token) && nowMs >= finnhubBlockedUntil;
 
   const out = {};
   for (const sym of symbols) {
@@ -142,7 +156,7 @@ export async function getStocksData(symbols) {
       .toUpperCase();
     if (!s) continue;
     try {
-      if (token) {
+      if (allowFinnhub) {
         const [quoteRes, candles] = await Promise.all([
           axios.get(FINNHUB_QUOTE, {
             timeout: 12000,
@@ -167,6 +181,19 @@ export async function getStocksData(symbols) {
       }
     } catch (e) {
       const detail = e?.response?.data ? JSON.stringify(e.response.data).slice(0, 200) : String(e.message || e);
+      if (isFinnhubRateLimited(detail)) {
+        finnhubBlockedUntil = Date.now() + FINNHUB_COOLDOWN_MS;
+        try {
+          out[s] = await fetchFromYahoo(s);
+          continue;
+        } catch (fallbackError) {
+          const fallbackDetail = fallbackError?.response?.data
+            ? JSON.stringify(fallbackError.response.data).slice(0, 200)
+            : String(fallbackError.message || fallbackError);
+          out[s] = { symbol: s, error: fallbackDetail };
+          continue;
+        }
+      }
       const canFallback = detail.toLowerCase().includes("access") || detail.toLowerCase().includes("forbidden");
       if (canFallback) {
         try {

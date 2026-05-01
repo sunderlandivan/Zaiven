@@ -17,6 +17,8 @@ import { newsModule } from "./modules/news/module.js";
 import { audiModule } from "./modules/audi/module.js";
 import { gmailModule } from "./modules/gmail/module.js";
 import { musicModule } from "./modules/music/module.js";
+import { youtubeModule } from "./modules/youtube/module.js";
+import { systemModule } from "./modules/system/module.js";
 
 const grid = document.getElementById("zee-grid");
 const btnVoice = document.getElementById("zee-btn-voice");
@@ -27,7 +29,9 @@ const wakeStatus = document.getElementById("zee-wake-status");
 const micMeter = document.getElementById("zee-mic-meter");
 const root = document.getElementById("zee-root");
 
-[timeModule, stocksModule, newsModule, audiModule, gmailModule, musicModule].forEach((m) => registry.register(m));
+[timeModule, stocksModule, newsModule, audiModule, gmailModule, musicModule, youtubeModule, systemModule].forEach((m) =>
+  registry.register(m)
+);
 
 if (grid) registry.mountAll(grid);
 
@@ -52,9 +56,16 @@ let micMuted = false;
 let wakeRecognizer = null;
 let lastMeterLevel = 0;
 const AWAKE_WINDOW_MS = 10_000;
-let voiceArmed = true;
+let voiceArmed = false;
 let awakeUntil = 0;
 let awakeTimer = 0;
+let wakeRestartTimer = 0;
+let wakeLastError = "";
+let wakeLastErrorAt = 0;
+let wakeNetworkErrorCount = 0;
+let wakeNetworkWindowStart = 0;
+let wakeUnstable = false;
+const LEGACY_ALWAYS_ON_VOICE = true;
 
 if (wakeStatus) {
   const supported = Boolean(window.SpeechRecognition || window.webkitSpeechRecognition);
@@ -112,12 +123,18 @@ function drawMicWave(samples) {
 
 function setVoiceArmedUi() {
   if (!btnVoice) return;
+  if (LEGACY_ALWAYS_ON_VOICE) {
+    const live = isVoiceConnected();
+    btnVoice.textContent = live ? "Voice on" : "Voice off";
+    btnVoice.setAttribute("aria-pressed", live ? "true" : "false");
+    return;
+  }
   btnVoice.textContent = voiceArmed ? "Voice armed" : "Voice off";
   btnVoice.setAttribute("aria-pressed", voiceArmed ? "true" : "false");
 }
 
 function setWakeLabelSleeping() {
-  if (wakeStatus) wakeStatus.textContent = "Wake: ready (say 'Zee ...')";
+  if (wakeStatus) wakeStatus.textContent = wakeUnstable ? "Wake: unstable (direct listen mode)" : "Wake: ready (say 'Zee ...')";
 }
 
 async function sleepRealtime(reason = "idle") {
@@ -155,21 +172,35 @@ async function ensureAwake() {
   return true;
 }
 
+async function startDirectListenWindow(ms = 120_000) {
+  const awake = await ensureAwake().catch((e) => {
+    setVoiceStatus(`Zee: ${String(e.message || e)}`);
+    return false;
+  });
+  if (!awake) return false;
+  awakeUntil = Date.now() + ms;
+  scheduleSleepWindow();
+  if (wakeStatus) wakeStatus.textContent = "Wake: direct listen active";
+  setVoiceStatus("Zee: direct listening active (speak now)");
+  return true;
+}
+
 function getWakeWordRecognizer() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) return null;
   const recog = new SpeechRecognition();
   recog.continuous = true;
-  recog.interimResults = false;
+  recog.interimResults = true;
   recog.lang = "en-US";
   return recog;
 }
 
 function parseWakeCommand(text) {
   const cleaned = String(text || "").trim();
-  if (!cleaned) return "";
-  const m = cleaned.match(/^(?:hey[\s,]+)?zee[\s,.:;-]*(.+)$/i);
-  return m ? String(m[1] || "").trim() : "";
+  if (!cleaned) return { woke: false, cmd: "" };
+  const m = cleaned.match(/^(?:hey[\s,]+)?zee\b[\s,.:;-]*(.*)$/i);
+  if (!m) return { woke: false, cmd: "" };
+  return { woke: true, cmd: String(m[1] || "").trim() };
 }
 
 function normalizeWakeCommand(cmd) {
@@ -221,6 +252,20 @@ async function processSpokenCommand(rawCmd) {
   else setVoiceStatus(`Zee: processing "${cmd}"`);
 }
 
+async function wakeOnly() {
+  if (wakeUnstable) {
+    await startDirectListenWindow(120_000);
+    return;
+  }
+  const awake = await ensureAwake().catch((e) => {
+    setVoiceStatus(`Zee: ${String(e.message || e)}`);
+    return false;
+  });
+  if (!awake) return;
+  setVoiceStatus("Zee: awake — awaiting command");
+  if (voiceHeard) voiceHeard.textContent = "Heard: Zee (wake)";
+}
+
 function startWakeWordLoop() {
   if (wakeRecognizer) return;
   const recog = getWakeWordRecognizer();
@@ -231,17 +276,26 @@ function startWakeWordLoop() {
   }
   wakeRecognizer = recog;
   setWakeLabelSleeping();
+  setVoiceStatus("Zee: wake listener starting...");
   if (voiceHeard) voiceHeard.textContent = "Heard: say 'Zee, ...'";
+  recog.onstart = () => {
+    setVoiceStatus("Zee: wake listener active");
+    if (wakeStatus) wakeStatus.textContent = wakeUnstable ? "Wake: unstable (direct listen mode)" : "Wake: ready (say 'Zee ...')";
+  };
   recog.onresult = (event) => {
     for (let i = event.resultIndex; i < event.results.length; i++) {
       const res = event.results[i];
-      if (!res.isFinal) continue;
       const spoken = String(res[0]?.transcript || "").trim();
       if (!spoken) continue;
+      if (!res.isFinal && !/\bzee\b/i.test(spoken)) continue;
       if (voiceHeard) voiceHeard.textContent = `Heard: ${spoken}`;
-      const wakeCmd = parseWakeCommand(spoken);
-      if (wakeCmd) {
-        processSpokenCommand(wakeCmd).catch(() => {});
+      const wakeParsed = parseWakeCommand(spoken);
+      if (wakeParsed.woke) {
+        if (!wakeParsed.cmd) {
+          wakeOnly().catch(() => {});
+        } else {
+          processSpokenCommand(wakeParsed.cmd).catch(() => {});
+        }
         continue;
       }
       if (Date.now() < awakeUntil) {
@@ -251,16 +305,44 @@ function startWakeWordLoop() {
   };
   recog.onerror = (ev) => {
     const err = String(ev.error || "speech error");
-    if (voiceHeard) voiceHeard.textContent = `Heard: ${err}`;
-    if (wakeStatus) wakeStatus.textContent = `Wake: ${err}`;
+    if (err === "network") {
+      const now = Date.now();
+      if (!wakeNetworkWindowStart || now - wakeNetworkWindowStart > 20_000) {
+        wakeNetworkWindowStart = now;
+        wakeNetworkErrorCount = 0;
+      }
+      wakeNetworkErrorCount += 1;
+      if (wakeNetworkErrorCount >= 3) {
+        wakeUnstable = true;
+        stopWakeWordLoop();
+        if (wakeStatus) wakeStatus.textContent = "Wake: unstable (direct listen mode)";
+        startDirectListenWindow(30_000).catch(() => {});
+        return;
+      }
+    }
+    const now = Date.now();
+    if (err !== wakeLastError || now - wakeLastErrorAt > 2500) {
+      wakeLastError = err;
+      wakeLastErrorAt = now;
+      if (voiceHeard) voiceHeard.textContent = `Heard: ${err}`;
+      if (wakeStatus) wakeStatus.textContent = wakeUnstable
+        ? "Wake: unstable (direct listen mode)"
+        : err === "network"
+          ? "Wake: retrying..."
+          : `Wake: ${err}`;
+      setVoiceStatus(`Zee: wake error (${err})`);
+    }
   };
   recog.onend = () => {
     if (voiceArmed && wakeRecognizer === recog) {
-      try {
-        recog.start();
-      } catch {
-        // Browser may throttle rapid restarts; next end cycle retries.
-      }
+      if (wakeRestartTimer) window.clearTimeout(wakeRestartTimer);
+      wakeRestartTimer = window.setTimeout(() => {
+        try {
+          recog.start();
+        } catch {
+          // Browser may throttle rapid restarts; timed retries continue.
+        }
+      }, 350);
     }
   };
   try {
@@ -272,6 +354,10 @@ function startWakeWordLoop() {
 
 function stopWakeWordLoop() {
   if (!wakeRecognizer) return;
+  if (wakeRestartTimer) {
+    window.clearTimeout(wakeRestartTimer);
+    wakeRestartTimer = 0;
+  }
   try {
     wakeRecognizer.onend = null;
     wakeRecognizer.stop();
@@ -284,9 +370,29 @@ function stopWakeWordLoop() {
 
 async function toggleVoice() {
   if (!btnVoice) return;
+  if (LEGACY_ALWAYS_ON_VOICE) {
+    try {
+      if (isVoiceConnected()) {
+        stopWakeWordLoop();
+        await disconnectZeeVoice();
+        if (wakeStatus) wakeStatus.textContent = "Wake: off";
+        setVoiceStatus("Zee: voice idle");
+      } else {
+        await connectZeeVoice();
+        if (wakeStatus) wakeStatus.textContent = "Wake: legacy on";
+        setVoiceStatus("Zee: listening");
+      }
+    } catch (e) {
+      setVoiceStatus(`Zee: ${String(e.message || e)}`);
+    } finally {
+      setVoiceArmedUi();
+    }
+    return;
+  }
   if (voiceArmed) {
     voiceArmed = false;
     stopWakeWordLoop();
+    wakeUnstable = false;
     await sleepRealtime("disabled");
     micMuted = false;
     setMicMuted(false);
@@ -294,8 +400,33 @@ async function toggleVoice() {
     return;
   }
   voiceArmed = true;
-  startWakeWordLoop();
-  setVoiceStatus("Zee: standing by");
+  try {
+    const s = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    s.getTracks().forEach((t) => t.stop());
+  } catch (e) {
+    setVoiceStatus(`Zee: mic permission required (${String(e.message || e)})`);
+  }
+  // Deterministic path: always connect live voice when armed.
+  const awake = await ensureAwake().catch((e) => {
+    setVoiceStatus(`Zee: ${String(e.message || e)}`);
+    return false;
+  });
+  if (!awake) {
+    setVoiceArmedUi();
+    return;
+  }
+  if (wakeUnstable) {
+    awakeUntil = Date.now() + 120_000;
+    scheduleSleepWindow();
+    if (wakeStatus) wakeStatus.textContent = "Wake: direct listen active";
+    setVoiceStatus("Zee: live voice active (speak now)");
+    sendTextPrompt("Say: Zee online.");
+  } else {
+    startWakeWordLoop();
+    if (wakeStatus) wakeStatus.textContent = "Wake: live";
+    setVoiceStatus("Zee: live voice active (say Zee or speak)");
+    sendTextPrompt("Say: Zee online.");
+  }
   setVoiceArmedUi();
 }
 
@@ -333,4 +464,3 @@ window.zee = {
 
 drawMicLevel(0);
 setVoiceArmedUi();
-startWakeWordLoop();

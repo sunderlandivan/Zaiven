@@ -3,7 +3,7 @@ import axios from "axios";
 const OPENAI_REALTIME_CALLS = "https://api.openai.com/v1/realtime/calls";
 const OPENAI_CLIENT_SECRETS = "https://api.openai.com/v1/realtime/client_secrets";
 
-export const ZEE_INSTRUCTIONS = `You are "Zee", a calm, precise AI copilot with a subtle Jarvis-like tone—efficient, respectful, and slightly futuristic. You help the user manage their day: dashboard modules (time, stocks, news, vehicle, Gmail, music), voice control, and brief spoken summaries when asked.
+export const ZEE_INSTRUCTIONS = `You are "Zee", a calm, precise AI copilot with a subtle Jarvis-like tone—efficient, respectful, and slightly futuristic. You help the user manage their day: dashboard modules (time, stocks, news, vehicle, Gmail, music, youtube, system performance), voice control, and brief spoken summaries when asked.
 
 Locked voice persona profile (persistent):
 - Voice profile: EN-GB
@@ -49,7 +49,7 @@ export function getZeeRealtimeTools() {
         properties: {
           id: {
             type: "string",
-            enum: ["time", "stocks", "news", "audi", "gmail", "music"],
+            enum: ["time", "stocks", "news", "audi", "gmail", "music", "youtube", "system"],
           },
         },
         required: ["id"],
@@ -64,7 +64,7 @@ export function getZeeRealtimeTools() {
         properties: {
           id: {
             type: "string",
-            enum: ["time", "stocks", "news", "audi", "gmail", "music"],
+            enum: ["time", "stocks", "news", "audi", "gmail", "music", "youtube", "system"],
           },
         },
         required: ["id"],
@@ -79,7 +79,7 @@ export function getZeeRealtimeTools() {
         properties: {
           id: {
             type: "string",
-            enum: ["time", "stocks", "news", "audi", "gmail", "music"],
+            enum: ["time", "stocks", "news", "audi", "gmail", "music", "youtube", "system"],
           },
         },
         required: ["id"],
@@ -188,6 +188,27 @@ export function getZeeRealtimeTools() {
       description: "Summarize the top few recent Gmail messages (subjects and senders).",
       parameters: { type: "object", properties: {} },
     },
+    {
+      type: "function",
+      name: "open_youtube_video",
+      description: "Open the Youtube module and play a video by index from the current thumbnail list.",
+      parameters: {
+        type: "object",
+        properties: { index: { type: "integer", minimum: 1, maximum: 8 } },
+      },
+    },
+    {
+      type: "function",
+      name: "pause_youtube_video",
+      description: "Pause the currently playing Youtube video in the foreground window.",
+      parameters: { type: "object", properties: {} },
+    },
+    {
+      type: "function",
+      name: "get_system_stats",
+      description: "Return latest system performance stats (CPU, memory, disk, uptime, and available temps).",
+      parameters: { type: "object", properties: {} },
+    },
   ];
 }
 
@@ -208,6 +229,8 @@ export function buildSessionObject() {
           threshold: 0.5,
           prefix_padding_ms: 300,
           silence_duration_ms: 550,
+          create_response: true,
+          interrupt_response: true,
         },
         transcription: {
           model: "gpt-4o-mini-transcribe",
