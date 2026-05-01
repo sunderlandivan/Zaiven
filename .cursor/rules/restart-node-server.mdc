@@ -1,0 +1,20 @@
+---
+description: Restart the local Node server after backend changes without asking the user
+alwaysApply: true
+---
+
+# Restart TCG Node server (no prompt)
+
+Whenever you change anything under `server/`, `package.json`, or otherwise need the running app to pick up **Node/Express** code, **restart the server automatically**. Do **not** ask the user for permission first.
+
+## How (Windows / PowerShell)
+
+From the repo root `TCG`:
+
+1. Load Gmail OAuth env from the user profile (if set): `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REDIRECT_URI` via `[Environment]::GetEnvironmentVariable(..., 'User')`.
+2. Stop the process listening on **port 5173** (app `PORT`): use `Get-NetTCPConnection -LocalPort 5173 -State Listen` and `Stop-Process` on **`OwningProcess`**. In `foreach`, use a variable name like **`$procId`** — **never `$pid`** (conflicts with PowerShell’s automatic `$PID`).
+3. `Start-Sleep -Milliseconds 400`, then run **`node server/index.js`** in the **background** (`block_until_ms: 0`).
+
+## When not to restart
+
+Pure `public/` static edits usually only need a browser hard refresh; still restart if you need to verify API behavior or the user’s flow depends on the server.

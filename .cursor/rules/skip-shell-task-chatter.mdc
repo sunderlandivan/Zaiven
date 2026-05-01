@@ -1,0 +1,12 @@
+---
+description: Do not narrate routine background shell task completions unless it matters
+alwaysApply: true
+---
+
+# Background shell tasks
+
+When a message exists only because a **background shell job** finished (e.g. restart, `block_until_ms: 0` follow-up):
+
+- **Do not** post a long recap (task id, exit codes, “health ok”, etc.) after normal user questions.
+- **Only** mention it if: the job **failed**, the user **asked** for status, or they **must** do something (port dead, fix error, re-run command).
+- Otherwise skip entirely or use **one short line** if acknowledgment is unavoidable.

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Zee — HUD</title>
+    <link rel="stylesheet" href="/zee/styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700&family=Share+Tech+Mono&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body class="zee-body">
+    <div id="zee-root" class="zee-root" aria-label="Zee dashboard">
+      <div class="zee-bg" aria-hidden="true"></div>
+      <header class="zee-topbar">
+        <div class="zee-brand">
+          <span class="zee-logo-ring"></span>
+          <div>
+            <div class="zee-title">ZEE</div>
+            <div class="zee-sub">Personal command HUD</div>
+          </div>
+        </div>
+        <div class="zee-topbar-actions">
+          <span class="zee-hint">Alt+Z toggle</span>
+          <div class="zee-meter-wrap" title="Mic input level">
+            <span class="zee-meter-label">Mic</span>
+            <canvas id="zee-mic-meter" class="zee-meter" width="90" height="18"></canvas>
+          </div>
+          <button type="button" id="zee-btn-voice" class="zee-btn zee-btn-voice" aria-pressed="false">
+            Voice off
+          </button>
+          <button type="button" id="zee-btn-compact" class="zee-btn">HUD mode</button>
+        </div>
+      </header>
+      <main id="zee-grid" class="zee-grid"></main>
+      <footer class="zee-footer">
+        <span id="zee-voice-status" class="zee-voice-status">Voice idle</span>
+        <span id="zee-wake-status" class="zee-voice-heard">Wake: unavailable</span>
+        <span id="zee-voice-heard" class="zee-voice-heard">Heard: —</span>
+        <span class="zee-footer-meta">Local server · OpenAI Realtime · modules extensible</span>
+      </footer>
+    </div>
+    <audio id="zee-music-audio" class="zee-sr-only" crossorigin="anonymous"></audio>
+    <script type="module" src="/zee/app.js"></script>
+  </body>
+</html>

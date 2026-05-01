@@ -1,12 +1,221 @@
 import express from "express";
 import http from "http";
+import { execSync } from "child_process";
 import { Server } from "socket.io";
 import { nanoid } from "nanoid";
+import {
+  addOrder,
+  getInventoryDashboard,
+  importOrdersFromCsv,
+  importInventoryFromExcel,
+  listOrders,
+  refreshMarketData,
+  resetInventoryAndWorkflowData,
+  resetOrdersData,
+  sanitizeLegacyPricechartingUrlsInInventory,
+  updateOrderTrackingStatus,
+  updateItemWorkflow,
+} from "./inventoryAgent.js";
+import {
+  disconnectGmailSync,
+  getGmailAuthStartUrl,
+  getGmailSyncStatus,
+  handleGmailAuthCallback,
+  syncOrdersFromGmail,
+} from "./gmailOrders.js";
+import { createZeeRouter } from "./zee/router.js";
+
+function hydrateUserEnvVars(varNames) {
+  if (process.platform !== "win32") return;
+  for (const name of varNames) {
+    if (String(process.env[name] || "").trim()) continue;
+    try {
+      const ps = `[Environment]::GetEnvironmentVariable('${name}','User')`;
+      const val = String(execSync(`powershell -NoProfile -Command "${ps}"`, { encoding: "utf8" }) || "").trim();
+      if (val) process.env[name] = val;
+    } catch {
+      // Best-effort only; leave missing vars untouched.
+    }
+  }
+}
+
+hydrateUserEnvVars([
+  "OPENAI_API_KEY",
+  "OPENAI_REALTIME_MODEL",
+  "OPENAI_REALTIME_VOICE",
+  "STOCKS_API_KEY",
+  "FINNHUB_API_KEY",
+  "NEWS_API_KEY",
+  "GMAIL_CLIENT_ID",
+  "GMAIL_CLIENT_SECRET",
+  "GMAIL_REDIRECT_URI",
+  "ZEE_GMAIL_REDIRECT_URI",
+  "ZEE_MUSIC_ROOT",
+  "ZEE_AUDI_IMAGE_PATH",
+]);
+
+sanitizeLegacyPricechartingUrlsInInventory();
 
 const app = express();
+app.use(express.json());
 app.use(express.static("public"));
+app.use("/api/zee", createZeeRouter());
+app.get("/zee", (_req, res) => {
+  res.sendFile("zee.html", { root: "public" });
+});
 app.get("/health", (_req, res) => {
   res.json({ ok: true });
+});
+
+app.get("/inventory", (_req, res) => {
+  res.sendFile("inventory-import.html", { root: "public" });
+});
+
+app.post("/api/inventory/import", (req, res) => {
+  try {
+    const filePath = String(req.body?.filePath || "").trim();
+    if (!filePath) {
+      res.status(400).json({ ok: false, error: "filePath is required." });
+      return;
+    }
+    const result = importInventoryFromExcel(filePath);
+    res.json({ ok: true, result });
+  } catch (error) {
+    res.status(400).json({ ok: false, error: error.message });
+  }
+});
+
+app.post("/api/inventory/refresh-prices", async (req, res) => {
+  try {
+    const result = await refreshMarketData();
+    res.json({ ok: true, result });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
+app.post("/api/reset/inventory-workflow", (_req, res) => {
+  try {
+    const result = resetInventoryAndWorkflowData();
+    res.json({ ok: true, result });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
+app.post("/api/reset/orders", (_req, res) => {
+  try {
+    const result = resetOrdersData();
+    res.json({ ok: true, result });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
+app.get("/api/inventory/dashboard", (_req, res) => {
+  try {
+    const data = getInventoryDashboard();
+    res.json({ ok: true, data });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
+app.post("/api/inventory/workflow", (req, res) => {
+  try {
+    const result = updateItemWorkflow(req.body || {});
+    res.json({ ok: true, result });
+  } catch (error) {
+    res.status(400).json({ ok: false, error: error.message });
+  }
+});
+
+app.get("/api/orders", (_req, res) => {
+  try {
+    res.json({ ok: true, orders: listOrders() });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
+app.post("/api/orders", (req, res) => {
+  try {
+    const order = addOrder(req.body || {});
+    res.json({ ok: true, order });
+  } catch (error) {
+    res.status(400).json({ ok: false, error: error.message });
+  }
+});
+
+app.post("/api/orders/import-csv", (req, res) => {
+  try {
+    const filePath = String(req.body?.filePath || "").trim();
+    const replaceExisting = Boolean(req.body?.replaceExisting);
+    if (!filePath) {
+      res.status(400).json({ ok: false, error: "filePath is required." });
+      return;
+    }
+    const result = importOrdersFromCsv(filePath, { replaceExisting });
+    res.json({ ok: true, result });
+  } catch (error) {
+    res.status(400).json({ ok: false, error: error.message });
+  }
+});
+
+app.post("/api/orders/tracking-status", (req, res) => {
+  try {
+    const result = updateOrderTrackingStatus(req.body || {});
+    res.json({ ok: true, order: result });
+  } catch (error) {
+    res.status(400).json({ ok: false, error: error.message });
+  }
+});
+
+app.get("/api/orders/gmail/status", (_req, res) => {
+  try {
+    res.json({ ok: true, status: getGmailSyncStatus() });
+  } catch (error) {
+    res.status(400).json({ ok: false, error: error.message });
+  }
+});
+
+app.get("/api/orders/gmail/auth/start", (_req, res) => {
+  try {
+    const authUrl = getGmailAuthStartUrl();
+    res.json({ ok: true, authUrl });
+  } catch (error) {
+    res.status(400).json({ ok: false, error: error.message });
+  }
+});
+
+app.get("/api/orders/gmail/auth/callback", async (req, res) => {
+  try {
+    await handleGmailAuthCallback({
+      code: req.query?.code,
+      state: req.query?.state,
+    });
+    res.send(`<!doctype html><html><body><script>window.location.href="/inventory-orders.html?gmail=connected";</script>Gmail connected. You can close this tab.</body></html>`);
+  } catch (error) {
+    res.status(400).send(`Gmail connect failed: ${String(error.message || error)}`);
+  }
+});
+
+app.post("/api/orders/gmail/disconnect", (_req, res) => {
+  try {
+    const result = disconnectGmailSync();
+    res.json({ ok: true, result });
+  } catch (error) {
+    res.status(400).json({ ok: false, error: error.message });
+  }
+});
+
+app.post("/api/orders/gmail/sync", async (req, res) => {
+  try {
+    const result = await syncOrdersFromGmail(req.body || {});
+    res.json({ ok: true, result });
+  } catch (error) {
+    res.status(400).json({ ok: false, error: error.message });
+  }
 });
 
 const server = http.createServer(app);

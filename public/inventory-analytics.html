@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sell &amp; analytics — TCG Inventory</title>
+    <link rel="stylesheet" href="/inventory.css" />
+  </head>
+  <body data-page="analytics">
+    <div class="app-shell">
+      <aside class="nav-pane">
+        <div class="nav-brand">TCG Inventory</div>
+        <nav class="nav-links">
+          <a class="nav-link" href="/inventory-import.html">Import &amp; pricing</a>
+          <a class="nav-link active" href="/inventory-analytics.html">Sell &amp; analytics</a>
+          <a class="nav-link" href="/inventory-orders.html">Order tracking</a>
+        </nav>
+        <a class="nav-footer-link" href="/">← Game prototype</a>
+      </aside>
+      <main class="nav-content">
+        <header class="content-header">
+          <h1>Sell &amp; analytics</h1>
+        </header>
+
+        <section class="panel">
+          <h2>Financial snapshot</h2>
+          <div id="totals"></div>
+        </section>
+
+        <div class="analytics-columns">
+          <div class="analytics-col">
+          <section class="panel">
+            <h2>Best items to sell now</h2>
+            <p class="help">
+              Includes only items where estimated profit after fees is at least your unit cost (2x money threshold).
+            </p>
+            <div class="table-wrap">
+              <table id="recTable">
+                <thead>
+                  <tr>
+                    <th>Product</th>
+                    <th>Preview</th>
+                    <th>Qty</th>
+                    <th>Unit cost</th>
+                    <th>TCGplayer market</th>
+                    <th>Source</th>
+                    <th>Best platform</th>
+                    <th>Profit / unit</th>
+                    <th>Total profit</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+            <p id="recGrandTotal" class="help"></p>
+          </section>
+
+          <section class="panel">
+            <h2>Sell this week (top 10)</h2>
+            <p class="help">High-confidence picks based on market data freshness, margin, and estimated total profit after fees.</p>
+            <div class="table-wrap">
+              <table id="sellWeekTable">
+                <thead>
+                  <tr>
+                    <th>Product</th>
+                    <th>Preview</th>
+                    <th>Game</th>
+                    <th>Qty</th>
+                    <th>Platform</th>
+                    <th>Profit / unit</th>
+                    <th>Total profit</th>
+                    <th>Confidence</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="panel">
+            <h2>Losing items (negative profit)</h2>
+            <p class="help">Rows with estimated total profit below $0 after marketplace fees.</p>
+            <div class="table-wrap">
+              <table id="losersTable">
+                <thead>
+                  <tr>
+                    <th>Product</th>
+                    <th>Preview</th>
+                    <th>Qty</th>
+                    <th>Unit cost</th>
+                    <th>TCG market</th>
+                    <th>Source</th>
+                    <th>Profit / unit</th>
+                    <th>Profit %</th>
+                    <th>Total profit</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </section>
+          </div>
+
+          <div class="analytics-col">
+          <section class="panel">
+            <h2>Top profit analytics</h2>
+            <div class="row">
+              <select id="categoryFilter">
+                <option value="all">All products</option>
+                <option value="pokemon">Pokemon</option>
+                <option value="final fantasy">Final Fantasy</option>
+                <option value="lorcana">Lorcana</option>
+                <option value="one piece">One Piece</option>
+                <option value="magic">Magic</option>
+                <option value="yugioh">Yu-Gi-Oh</option>
+                <option value="other">Other</option>
+              </select>
+              <input id="minProfitFilter" type="number" min="0" step="1" value="0" placeholder="Min total profit ($)" />
+            </div>
+            <p class="help">Ranked by total estimated profit after marketplace fees, using your quantity and cost basis.</p>
+            <div class="table-wrap">
+              <table id="analyticsTable">
+                <thead>
+                  <tr>
+                    <th>Product</th>
+                    <th>Preview</th>
+                    <th>Qty</th>
+                    <th>Unit cost</th>
+                    <th>Total cost</th>
+                    <th>TCG market</th>
+                    <th>Source</th>
+                    <th>Platform</th>
+                    <th>Fees / unit</th>
+                    <th>Total fees</th>
+                    <th>Net / unit</th>
+                    <th>Profit / unit</th>
+                    <th>Profit %</th>
+                    <th>Total profit</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </section>
+          </div>
+        </div>
+
+        <p id="status" class="status"></p>
+      </main>
+    </div>
+    <script type="module" src="/inventory.js"></script>
+  </body>
+</html>

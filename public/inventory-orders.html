@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Order tracking — TCG Inventory</title>
+    <link rel="stylesheet" href="/inventory.css" />
+  </head>
+  <body data-page="orders">
+    <div class="app-shell">
+      <aside class="nav-pane">
+        <div class="nav-brand">TCG Inventory</div>
+        <nav class="nav-links">
+          <a class="nav-link" href="/inventory-import.html">Import &amp; pricing</a>
+          <a class="nav-link" href="/inventory-analytics.html">Sell &amp; analytics</a>
+          <a class="nav-link active" href="/inventory-orders.html">Order tracking</a>
+        </nav>
+        <a class="nav-footer-link" href="/">← Game prototype</a>
+      </aside>
+      <main class="nav-content">
+        <header class="content-header">
+          <h1>Order tracking</h1>
+        </header>
+
+        <section class="panel">
+          <h2>Gmail order sync</h2>
+          <div class="row">
+            <button id="connectGmailBtn">Connect Gmail</button>
+            <button id="disconnectGmailBtn" class="subtle">Disconnect Gmail</button>
+            <button id="syncGmailBtn">Sync Gmail</button>
+            <button id="syncGmailFullBtn" class="subtle" type="button">Sync Gmail (full YTD)</button>
+          </div>
+          <p class="help">
+            Reads TCGplayer seller emails and USPS label mail, then merges by order number when possible.
+            USPS Click‑N‑Ship uses its <strong>own</strong> order id (UUID), not your TCGplayer order # — we match those
+            labels to rows by <strong>buyer name + label date + postage vs shipping</strong>, so a wrong order date in
+            the CSV or a crowded inbox can still miss a row. Use <strong>Sync Gmail (full YTD)</strong> when you want a
+            deeper pass (slower). Mail is limited to on or after <strong>Jan&nbsp;1,&nbsp;2026</strong> unless
+            <code>GMAIL_SYNC_AFTER</code> is set.
+          </p>
+          <p id="gmailSyncStatus" class="help"></p>
+        </section>
+
+        <section class="panel">
+          <h2>Import TCGplayer orders CSV</h2>
+          <div class="row">
+            <input id="ordersCsvPath" type="text" placeholder="C:\Users\you\Downloads\TCGplayer_OrderList.csv" />
+            <button id="importOrdersCsvBtn">Import CSV</button>
+            <button id="replaceOrdersCsvBtn" class="subtle">Replace all with CSV</button>
+          </div>
+          <p class="help">
+            CSV import captures order number, buyer, date, status, amounts, and tracking when the export includes it. If the
+            sheet has a <strong>Tax</strong> / <strong>Sales Tax</strong> column, it is stored as buyer tax for fee estimates.
+            Many TCGplayer order-list CSVs leave carrier/tracking blank — use Gmail sync for tracking; re-importing the same CSV
+            keeps existing tracking when the file still has no carrier column.
+          </p>
+        </section>
+
+        <section class="panel">
+          <h2>Record an order</h2>
+          <form id="orderForm" class="order-grid">
+            <input name="productName" placeholder="Product name" required />
+            <input name="quantity" type="number" min="1" value="1" required />
+            <input name="salePrice" type="number" min="0" step="0.01" placeholder="Sale price" required />
+            <select name="platform">
+              <option value="ebay">eBay</option>
+              <option value="tcgplayer">TCGplayer</option>
+            </select>
+            <input name="feeAmount" type="number" min="0" step="0.01" placeholder="Fees (optional)" />
+            <input name="buyerTax" type="number" min="0" step="0.01" placeholder="Buyer tax (optional)" />
+            <input name="shippingCost" type="number" min="0" step="0.01" placeholder="Shipping" />
+            <input name="trackingNumber" placeholder="Tracking number" />
+            <input name="purchaseDate" type="date" required />
+            <button type="submit">Save order</button>
+          </form>
+          <p class="help">
+            For TCGplayer rows with blank fees, estimates follow TCGplayer’s published fee types (banker’s rounding). Default
+            is <strong>Level 1–4</strong> (10.75% on subtotal with a $75/unit cap when it applies, plus 2.5% + $0.30 on the
+            charged total including buyer tax). If your portal totals look like <strong>Marketplace Pro</strong> (9.25% +
+            2.5% on subtotal plus the same transaction fee), set <code>TCG_FEE_SELLER_PROFILE=pro</code> on the server. If
+            buyer tax is unknown, the server uses <code>TCG_ESTIMATED_BUYER_TAX_RATE</code> (7% for Level 1–4, 8.5% when
+            profile is Pro); override the env var or enter buyer tax when you know it.
+          </p>
+        </section>
+
+        <section class="panel">
+          <h2>Recent orders</h2>
+          <div class="orders-toolbar">
+            <div class="row">
+              <input
+                id="ordersSearchInput"
+                type="search"
+                placeholder="Search order #, buyer, tracking…"
+                class="orders-search"
+              />
+              <select id="ordersTrackingStatusFilter" class="orders-status-filter" title="Tracking status">
+                <option value="">All tracking statuses</option>
+                <option value="tracked">Tracked</option>
+                <option value="missing">Missing tracking</option>
+                <option value="stamp">Stamp / no tracking</option>
+              </select>
+            </div>
+            <div class="row orders-date-row">
+              <label>From <input type="date" id="ordersDateFrom" /></label>
+              <label>To <input type="date" id="ordersDateTo" /></label>
+              <span id="ordersFilterCount" class="help"></span>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table id="ordersTable">
+              <thead>
+                <tr>
+                  <th>Order #</th>
+                  <th>Buyer</th>
+                  <th>Order date</th>
+                  <th>Platform</th>
+                  <th>Status</th>
+                  <th>Shipping type</th>
+                  <th>Sale</th>
+                  <th>Shipping</th>
+                  <th>Fees</th>
+                  <th>Total</th>
+                  <th>Tracking status</th>
+                  <th>Tracking</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+
+        <p id="status" class="status"></p>
+      </main>
+    </div>
+    <script type="module" src="/inventory.js"></script>
+  </body>
+</html>

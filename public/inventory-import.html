@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Import &amp; pricing — TCG Inventory</title>
+    <link rel="stylesheet" href="/inventory.css" />
+  </head>
+  <body data-page="import">
+    <div class="app-shell">
+      <aside class="nav-pane">
+        <div class="nav-brand">TCG Inventory</div>
+        <nav class="nav-links">
+          <a class="nav-link active" href="/inventory-import.html">Import &amp; pricing</a>
+          <a class="nav-link" href="/inventory-analytics.html">Sell &amp; analytics</a>
+          <a class="nav-link" href="/inventory-orders.html">Order tracking</a>
+        </nav>
+        <a class="nav-footer-link" href="/">← Game prototype</a>
+      </aside>
+      <main class="nav-content">
+        <header class="content-header">
+          <h1>Import &amp; pricing</h1>
+        </header>
+
+        <section class="panel">
+          <h2>Import inventory</h2>
+          <div class="row">
+            <input id="filePath" type="text" placeholder="C:\Users\you\Downloads\Poke Inventory.xlsx" />
+            <button id="importBtn">Import Excel</button>
+          </div>
+          <p class="help">
+            Each spreadsheet row becomes one inventory line (same product name on multiple rows stays separate). Re-importing replaces the list; item ids use the row position (<code>row_0</code>, <code>row_1</code>, …).
+          </p>
+        </section>
+
+        <section class="panel">
+          <h2>Pricing scan</h2>
+          <div class="row">
+            <button id="scanBtn">Refresh market prices</button>
+            <button id="reloadBtn" class="subtle">Reload import status</button>
+          </div>
+          <p class="help">
+            Rows with a <strong>TCG Link</strong> column use that URL only to resolve product and market price (no name search). Rows without a link still use marketplace search. Full refreshes can take several minutes for large inventories — the status line updates when finished.
+          </p>
+        </section>
+
+        <section class="panel">
+          <h2>Data reset tools</h2>
+          <div class="row">
+            <button id="resetInventoryBtn" class="subtle">Reset inventory + workflow</button>
+            <button id="resetOrdersBtn" class="subtle">Reset orders only</button>
+          </div>
+          <p class="help">
+            Use these only when needed. Inventory reset clears imported rows and sell workflow status. Orders reset clears order history only.
+          </p>
+        </section>
+
+        <p id="status" class="status"></p>
+      </main>
+    </div>
+    <script type="module" src="/inventory.js"></script>
+  </body>
+</html>
