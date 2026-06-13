@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --seniormind-navy: #1e3a5f;
+  --seniormind-navy-dark: #152a45;
+  --seniormind-accent: #2563eb;
+  --seniormind-accent-light: #3b82f6;
+  --seniormind-accent-dark: #1d4ed8;
+  --seniormind-success: #16a34a;
+  --seniormind-danger: #dc2626;
+  --seniormind-light: #eff6ff;
+}
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Prevent text selection on tablet UI for cleaner touch experience */
+.tablet-ui {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Ensure minimum touch target sizes */
+@layer utilities {
+  .touch-target {
+    min-height: 120px;
+    min-width: 120px;
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "name": "seniormind",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "supabase:setup": "node scripts/setup-supabase.mjs",
+    "supabase:login": "npx supabase login",
+    "supabase:test": "node scripts/test-supabase.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.104.1",
+    "@supabase/supabase-js": "^2.108.1",
+    "next": "14.2.35",
+    "react": "^18",
+    "react-dom": "^18"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "eslint": "^8",
+    "eslint-config-next": "14.2.35",
+    "postcss": "^8",
+    "supabase": "^2.106.0",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
+  }
+}
