@@ -11,10 +11,7 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabaseOrNull();
     if (!supabase) {
-      return NextResponse.json({
-        sessionId: `demo-${Date.now()}`,
-        demo: true,
-      });
+      return NextResponse.json({ error: "Database not configured" }, { status: 503 });
     }
 
     const { data, error } = await supabase
@@ -41,7 +38,7 @@ export async function PATCH(request: NextRequest) {
 
     const supabase = getSupabaseOrNull();
     if (!supabase) {
-      return NextResponse.json({ success: true, demo: true });
+      return NextResponse.json({ error: "Database not configured" }, { status: 503 });
     }
 
     const { error } = await supabase

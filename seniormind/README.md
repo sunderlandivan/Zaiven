@@ -2,13 +2,15 @@
 
 AI companion tablet and staff dashboard for skilled nursing facilities (SNFs).
 
-## Quick Start
+## Quick Start (local dev optional)
+
+Production runs at **https://zaiven.vercel.app**. For local development:
 
 ```bash
 cd seniormind
 npm install
-cp .env.example .env.local   # add your keys (optional for demo mode)
-npm run dev
+cp .env.example .env.local   # add Supabase + Anthropic keys
+npm.cmd run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000)
@@ -16,9 +18,11 @@ Open [http://localhost:3000](http://localhost:3000)
 - **Tablet App:** [/tablet](http://localhost:3000/tablet) — resident-facing UI
 - **Staff Dashboard:** [/dashboard](http://localhost:3000/dashboard) — nurse portal
 
-## Demo Mode
+## Production (tablets)
 
-Without Supabase or Anthropic keys configured, the app runs in **demo mode** with mock pilot data from Missy's Place. Claude responses use canned demo replies until `ANTHROPIC_API_KEY` is set.
+Point each tablet browser to **https://zaiven.vercel.app/tablet** and pin to the home screen as a PWA. Per-bed URLs can include a resident ID:
+
+`https://zaiven.vercel.app/tablet?resident=<resident-uuid>`
 
 ## Setup Supabase (one browser login)
 
@@ -73,7 +77,7 @@ See `PRODUCT_SPEC.md` for full product requirements, DB schema, and phased roadm
 
 ## Pilot
 
-- **Facility:** Missy's Place
+- **Facility:** Senior Living Homes
 - **Beds:** 10 tablets
 - **Trial:** 30 days free
 - **Goal:** Engagement + mood data to prove staff time savings

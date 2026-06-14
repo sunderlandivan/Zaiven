@@ -4,40 +4,35 @@ import { useEffect, useState } from "react";
 import AlertBanner from "./AlertBanner";
 import EngagementStats from "./EngagementStats";
 import ResidentCard from "./ResidentCard";
+import { PILOT_FACILITY_ID } from "@/lib/constants";
 import type { Resident, ResidentDashboardRow, StaffAlert } from "@/types";
-import { buildMockDashboardRows, mockAlerts, mockFacility, mockResidents } from "@/lib/mock-data";
 
 export default function DashboardView() {
   const [rows, setRows] = useState<ResidentDashboardRow[]>([]);
   const [alerts, setAlerts] = useState<StaffAlert[]>([]);
   const [residents, setResidents] = useState<Resident[]>([]);
-  const [facilityName, setFacilityName] = useState(mockFacility.name);
+  const [facilityName, setFacilityName] = useState("");
   const [loading, setLoading] = useState(true);
-  const [demoMode, setDemoMode] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch("/api/residents?facilityId=00000000-0000-4000-8000-000000000001");
+        const res = await fetch(`/api/residents?facilityId=${PILOT_FACILITY_ID}`);
         const data = await res.json();
 
-        if (data.demo) {
-          setDemoMode(true);
-          setRows(buildMockDashboardRows());
-          setAlerts(mockAlerts);
-          setResidents(mockResidents);
-          setFacilityName(mockFacility.name);
-        } else {
-          setRows(data.rows ?? []);
-          setAlerts(data.alerts ?? []);
-          setResidents(data.residents ?? []);
-          setFacilityName(data.facilityName ?? "Facility Dashboard");
+        if (!res.ok) {
+          setError(data.error ?? "Could not load dashboard data.");
+          return;
         }
+
+        setRows(data.rows ?? []);
+        setAlerts(data.alerts ?? []);
+        setResidents(data.residents ?? []);
+        setFacilityName(data.facilityName ?? "Facility Dashboard");
+        setError(null);
       } catch {
-        setDemoMode(true);
-        setRows(buildMockDashboardRows());
-        setAlerts(mockAlerts);
-        setResidents(mockResidents);
+        setError("Could not connect to the server. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -56,14 +51,16 @@ export default function DashboardView() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-xl p-8 text-center">
+        <p className="text-red-800 text-lg font-semibold">{error}</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
-      {demoMode && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-blue-800 text-sm">
-          Demo mode — connect Supabase in <code className="font-mono">.env.local</code> for live data.
-        </div>
-      )}
-
       <EngagementStats rows={rows} />
 
       <section>

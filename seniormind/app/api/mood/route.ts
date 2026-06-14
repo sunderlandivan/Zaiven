@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkMoodDeclineAlert } from "@/lib/alerts";
 import { getSupabaseOrNull } from "@/lib/supabase";
-import { DEMO_FACILITY_ID } from "@/lib/mock-data";
+import { PILOT_FACILITY_ID } from "@/lib/constants";
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabaseOrNull();
     if (!supabase) {
-      return NextResponse.json({ success: true, demo: true });
+      return NextResponse.json({ error: "Database not configured" }, { status: 503 });
     }
 
     const { data, error } = await supabase
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     if (error) throw error;
 
     if (source === "self_reported" && score < 4) {
-      await checkMoodDeclineAlert(supabase, residentId, DEMO_FACILITY_ID);
+      await checkMoodDeclineAlert(supabase, residentId, PILOT_FACILITY_ID);
     }
 
     return NextResponse.json({ success: true, moodLog: data });
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
 
   const supabase = getSupabaseOrNull();
   if (!supabase) {
-    return NextResponse.json({ demo: true, moodLogs: [] });
+    return NextResponse.json({ error: "Database not configured" }, { status: 503 });
   }
 
   const { data, error } = await supabase

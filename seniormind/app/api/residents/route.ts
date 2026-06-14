@@ -1,17 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseOrNull } from "@/lib/supabase";
-import {
-  buildMockDashboardRows,
-  DEMO_FACILITY_ID,
-  mockAlerts,
-  mockFacility,
-  mockResidents,
-} from "@/lib/mock-data";
+import { PILOT_FACILITY_ID } from "@/lib/constants";
 import type { MoodLog, Resident, ResidentDashboardRow, Session } from "@/types";
 
 async function buildDashboardFromDb(facilityId: string) {
   const supabase = getSupabaseOrNull();
-  if (!supabase) return null;
+  if (!supabase) {
+    return NextResponse.json({ error: "Database not configured" }, { status: 503 });
+  }
 
   const { data: facility } = await supabase
     .from("facilities")
@@ -19,11 +15,13 @@ async function buildDashboardFromDb(facilityId: string) {
     .eq("id", facilityId)
     .single();
 
-  const { data: residents } = await supabase
+  const { data: residents, error: residentsError } = await supabase
     .from("residents")
     .select("*")
     .eq("facility_id", facilityId)
     .order("room_number");
+
+  if (residentsError) throw residentsError;
 
   const { data: alerts } = await supabase
     .from("staff_alerts")
@@ -31,14 +29,12 @@ async function buildDashboardFromDb(facilityId: string) {
     .eq("facility_id", facilityId)
     .is("resolved_at", null);
 
-  if (!residents) return null;
-
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
   const weekAgo = new Date(Date.now() - 7 * 24 * 3600000);
 
   const rows: ResidentDashboardRow[] = await Promise.all(
-    residents.map(async (resident: Resident) => {
+    (residents ?? []).map(async (resident: Resident) => {
       const { data: sessions } = await supabase
         .from("sessions")
         .select("*")
@@ -77,40 +73,22 @@ async function buildDashboardFromDb(facilityId: string) {
     })
   );
 
-  return {
+  return NextResponse.json({
     facilityName: facility?.name ?? "Facility",
-    residents,
+    residents: residents ?? [],
     rows,
     alerts: alerts ?? [],
-    demo: false,
-  };
+  });
 }
 
 export async function GET(request: NextRequest) {
-  const facilityId = request.nextUrl.searchParams.get("facilityId") ?? DEMO_FACILITY_ID;
+  const facilityId = request.nextUrl.searchParams.get("facilityId") ?? PILOT_FACILITY_ID;
 
   try {
-    const live = await buildDashboardFromDb(facilityId);
-    if (live) {
-      return NextResponse.json(live);
-    }
-
-    return NextResponse.json({
-      demo: true,
-      facilityName: mockFacility.name,
-      residents: mockResidents,
-      rows: buildMockDashboardRows(),
-      alerts: mockAlerts,
-    });
+    return await buildDashboardFromDb(facilityId);
   } catch (error) {
     console.error("Residents API error:", error);
-    return NextResponse.json({
-      demo: true,
-      facilityName: mockFacility.name,
-      residents: mockResidents,
-      rows: buildMockDashboardRows(),
-      alerts: mockAlerts,
-    });
+    return NextResponse.json({ error: "Failed to load residents" }, { status: 500 });
   }
 }
 
@@ -121,13 +99,13 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabaseOrNull();
     if (!supabase) {
-      return NextResponse.json({ success: true, demo: true });
+      return NextResponse.json({ error: "Database not configured" }, { status: 503 });
     }
 
     const { data, error } = await supabase
       .from("residents")
       .insert({
-        facility_id: facilityId ?? DEMO_FACILITY_ID,
+        facility_id: facilityId ?? PILOT_FACILITY_ID,
         name,
         room_number: roomNumber,
         date_of_birth: dateOfBirth ?? null,

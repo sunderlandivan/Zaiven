@@ -68,12 +68,12 @@ CREATE INDEX IF NOT EXISTS idx_sessions_resident_start ON sessions(resident_id, 
 CREATE INDEX IF NOT EXISTS idx_mood_logs_resident_timestamp ON mood_logs(resident_id, timestamp DESC);
 CREATE INDEX IF NOT EXISTS idx_staff_alerts_facility_unresolved ON staff_alerts(facility_id) WHERE resolved_at IS NULL;
 
--- Seed data for pilot (Missy's Place)
+-- Seed data for pilot (Senior Living Homes)
 INSERT INTO facilities (id, name, contact_email, subscription_status, trial_start_date)
 VALUES (
   '00000000-0000-4000-8000-000000000001',
-  'Missy''s Place (Pilot)',
-  'admin@missysplace.demo',
+  'Senior Living Homes',
+  'admin@seniorlivinghomes.demo',
   'trial',
   now()
 ) ON CONFLICT (id) DO NOTHING;

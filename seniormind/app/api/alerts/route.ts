@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkNoActivityAlert } from "@/lib/alerts";
 import { getSupabaseOrNull } from "@/lib/supabase";
-import { DEMO_FACILITY_ID } from "@/lib/mock-data";
+import { PILOT_FACILITY_ID } from "@/lib/constants";
 
 export async function GET(request: NextRequest) {
-  const facilityId = request.nextUrl.searchParams.get("facilityId") ?? DEMO_FACILITY_ID;
+  const facilityId = request.nextUrl.searchParams.get("facilityId") ?? PILOT_FACILITY_ID;
 
   const supabase = getSupabaseOrNull();
   if (!supabase) {
-    return NextResponse.json({ demo: true, alerts: [] });
+    return NextResponse.json({ error: "Database not configured" }, { status: 503 });
   }
 
   const { data, error } = await supabase
@@ -31,7 +31,7 @@ export async function PATCH(request: NextRequest) {
 
     const supabase = getSupabaseOrNull();
     if (!supabase) {
-      return NextResponse.json({ success: true, demo: true });
+      return NextResponse.json({ error: "Database not configured" }, { status: 503 });
     }
 
     const { error } = await supabase
@@ -49,11 +49,11 @@ export async function PATCH(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { facilityId = DEMO_FACILITY_ID } = await request.json().catch(() => ({}));
+    const { facilityId = PILOT_FACILITY_ID } = await request.json().catch(() => ({}));
 
     const supabase = getSupabaseOrNull();
     if (!supabase) {
-      return NextResponse.json({ success: true, demo: true, checked: 0 });
+      return NextResponse.json({ error: "Database not configured" }, { status: 503 });
     }
 
     const { data: residents } = await supabase

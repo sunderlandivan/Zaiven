@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCompanionReply } from "@/lib/claude";
 import { checkMoodDeclineAlert } from "@/lib/alerts";
 import { getSupabaseOrNull } from "@/lib/supabase";
-import { DEMO_FACILITY_ID } from "@/lib/mock-data";
+import { PILOT_FACILITY_ID } from "@/lib/constants";
 import type { ChatMessage } from "@/types";
 
 export async function POST(request: NextRequest) {
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      await checkMoodDeclineAlert(supabase, residentId, DEMO_FACILITY_ID);
+      await checkMoodDeclineAlert(supabase, residentId, PILOT_FACILITY_ID);
     }
 
     return NextResponse.json({

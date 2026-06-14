@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createNurseCallAlert } from "@/lib/alerts";
 import { getSupabaseOrNull } from "@/lib/supabase";
-import { DEMO_FACILITY_ID } from "@/lib/mock-data";
+import { PILOT_FACILITY_ID } from "@/lib/constants";
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,10 +13,10 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabaseOrNull();
     if (!supabase) {
-      return NextResponse.json({ success: true, demo: true });
+      return NextResponse.json({ error: "Database not configured" }, { status: 503 });
     }
 
-    await createNurseCallAlert(supabase, residentId, DEMO_FACILITY_ID);
+    await createNurseCallAlert(supabase, residentId, PILOT_FACILITY_ID);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Nurse call error:", error);

@@ -26,7 +26,7 @@ export default function Home() {
         </div>
 
         <p className="mt-12 text-blue-300 text-lg">
-          Pilot: Missy&apos;s Place · 10 beds · 30-day trial
+          Pilot: Senior Living Homes · 10 beds · 30-day trial
         </p>
       </div>
     </div>
