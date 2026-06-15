@@ -19,6 +19,25 @@ If uncertain, return 6 (neutral).
 Never mention the mood score to the resident.
 Respond with ONLY valid JSON — no markdown, no code fences.`;
 
+/** Shown when Claude is unavailable (billing, outage) — not a demo; single static message */
+const OFFLINE_REPLY: CompanionResponse = {
+  message:
+    "Hi, I'm Sunny. I'm having a little trouble connecting right now, but I'm still here with you. Please try again in a moment, or tap Call a Nurse if you need help right away.",
+  mood_score: 6,
+  mood_signal: "companion service temporarily unavailable",
+};
+
+function isAnthropicUnavailable(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const msg = "message" in error ? String((error as { message?: string }).message) : "";
+  return (
+    msg.includes("credit balance") ||
+    msg.includes("not configured") ||
+    msg.includes("authentication") ||
+    msg.includes("invalid x-api-key")
+  );
+}
+
 function parseCompanionJson(raw: string): CompanionResponse {
   const trimmed = raw.trim();
   const jsonMatch = trimmed.match(/\{[\s\S]*\}/);
@@ -52,20 +71,28 @@ export async function getCompanionReply(
     ? `The resident's name is ${residentName}. Use their name warmly when appropriate.`
     : "";
 
-  const response = await anthropic.messages.create({
-    model: process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-6",
-    max_tokens: 512,
-    system: `${SYSTEM_PROMPT}\n\n${nameNote}`,
-    messages: messages.map((m) => ({
-      role: m.role,
-      content: m.content,
-    })),
-  });
+  try {
+    const response = await anthropic.messages.create({
+      model: process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-20250514",
+      max_tokens: 512,
+      system: `${SYSTEM_PROMPT}\n\n${nameNote}`,
+      messages: messages.map((m) => ({
+        role: m.role,
+        content: m.content,
+      })),
+    });
 
-  const textBlock = response.content.find((block) => block.type === "text");
-  if (!textBlock || textBlock.type !== "text") {
-    throw new Error("No text response from Claude");
+    const textBlock = response.content.find((block) => block.type === "text");
+    if (!textBlock || textBlock.type !== "text") {
+      throw new Error("No text response from Claude");
+    }
+
+    return parseCompanionJson(textBlock.text);
+  } catch (error) {
+    console.error("Claude API error:", error);
+    if (isAnthropicUnavailable(error)) {
+      return OFFLINE_REPLY;
+    }
+    throw error;
   }
-
-  return parseCompanionJson(textBlock.text);
 }

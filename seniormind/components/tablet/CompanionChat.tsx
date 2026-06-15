@@ -61,6 +61,16 @@ export default function CompanionChat({ residentId, residentName, onBack }: Comp
       const data = await res.json();
       if (data.message) {
         setMessages((prev) => [...prev, { role: "assistant", content: data.message }]);
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content:
+              data.error ??
+              "I'm having a little trouble right now. Please try again in a moment.",
+          },
+        ]);
       }
     } catch {
       setMessages((prev) => [
