@@ -42,7 +42,7 @@ temp_*
 pirate-warships-ue/
 pirate-warships-ue-bp/
 pirate-warships-web/
-seniormind/
+# seniormind: only a retired Vercel stub is tracked (full app stays local if present)
 
 # Cloudflare / wrangler local
 .wrangler/
