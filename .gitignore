@@ -24,6 +24,11 @@ data/*.log
 data/*.csv
 server/data/*.json
 
+# Hub laptop transfer packs (secrets + data — OneDrive only, never git)
+TCG-HUB-TRANSFER*/
+**/TCG-HUB-TRANSFER*/
+**/set-user-env.ps1
+
 # Build / cache / scratch
 .DS_Store
 Thumbs.db

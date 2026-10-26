@@ -1,117 +1,166 @@
-# PreEminent Store — Hub handoff (primary laptop)
+# PreEminent Store — Full console handoff
 
-**Purpose:** This machine is the **primary ops hub** for The PreEminent Store. Any new Agent on this laptop should read this file first and treat it as the operating charter. Continuity lives here and in `docs/` + git — **not** in old Cursor chats tied to other repos.
+**This file replaces the old PC’s Cursor console.** A blank laptop that clones Zaiven, restores `data\`, applies env from the transfer pack, and follows this doc should continue **all** PreEminent Store work with no dependence on the previous machine’s chat history.
 
-**Repo:** https://github.com/sunderlandivan/Zaiven (`main`)  
-**Preferred folder:** `OneDrive\Documents\Cursor\TCG`  
-**Live site:** https://preeminentstore.com (Cloudflare Pages project `preeminentstore`)  
-**Do not use as hub:** Cursor projects `thepreeminentstore.github.io` or `preeminent-marketing` (optional Shorts/playbook only). The store code, portal, inventory, and Google fixes live in **this** repo.
+| | |
+|--|--|
+| **Repo** | https://github.com/sunderlandivan/Zaiven (`main`) |
+| **Folder** | `OneDrive\Documents\Cursor\TCG` |
+| **Site** | https://preeminentstore.com |
+| **Portal media** | https://portal.preeminentstore.com |
+| **Local app** | http://localhost:5173 (`npm start`) |
+| **Sheet** | spreadsheet id `1LkMac4otBWqBpvxsLUe3lsHjdi79-OQZGVGDJwFSKcY` (via Gmail OAuth + Sheets scope) |
+| **MC account** | The PreEminent Store `5871019770` |
+| **GitHub auth** | **sunderlandivan** (not `ThePreEminentStore` — that account 403s on Zaiven) |
+| **Packaged** | 2026-10-26 |
 
-**Last packaged:** 2026-10-26 (from previous primary PC → GitHub `main`).
+**Not the hub:** Cursor chats under `thepreeminentstore.github.io` or `preeminent-marketing`. Optional Shorts/playbook only. Code + inventory + portal + Google fixes = **this repo**.
 
----
-
-## A) Bootstrap this laptop (do once)
-
-1. Auth GitHub as **sunderlandivan** for this repo (account `ThePreEminentStore` gets 403 on Zaiven).
-2. Open or clone into `OneDrive\Documents\Cursor\TCG`. Prefer the OneDrive path so `data\` and inventory photos sync.
-3. `git pull --ff-only origin main` (or run `scripts/setup-hub-laptop.ps1`).
-4. Ensure **`data\`** is present and non-empty (PayPal/YouTube/Resend-style credentials, inventory DBs, `store-settings.json`, orders, etc.). **Gitignored — never commit.** Copy from the old PC’s OneDrive TCG `data\` if missing.
-5. `npm install` → `npm start` (port **5173**). Confirm inventory UI loads.
-6. User env (Windows): `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REDIRECT_URI`.
-7. Cloudflare deploys: `npx wrangler login` once when needed. Secrets stay in the Cloudflare dashboard.
-8. Report back: path, `git rev-parse --short HEAD`, `data\` file count, server up?, missing env.
+**Transfer pack (secrets, not in git):**  
+`OneDrive\Documents\Cursor\TCG-HUB-TRANSFER-<date>\` (and `.zip`) — created by `scripts/pack-hub-transfer.ps1` on the old PC. Contains full `data\` + `set-user-env.ps1` + `INSTALL.txt`.
 
 ---
 
-## B) Permanent scope (you own all of this)
+## 1) Blank-laptop bootstrap
 
-| Area | Where |
-|------|--------|
-| Local inventory portal / Node API | `server/`, `public/inventory*` |
-| Storefront + checkout + feed/sitemap | `storefront/`, `cloudflare/` |
-| Cloud portal (sold / web orders / status) | `cloudflare-portal/` |
+Do in order. Details also in the transfer pack’s `INSTALL.txt`.
+
+1. Install **Git**, **Node.js LTS**, **Cursor**. Same **OneDrive** Microsoft account. GitHub as **sunderlandivan**.
+2. Clone:  
+   `git clone https://sunderlandivan@github.com/sunderlandivan/Zaiven.git`  
+   into `OneDrive\Documents\Cursor\TCG`.
+3. Copy transfer pack **`data\*`** → `TCG\data\`.
+4. Run transfer pack **`set-user-env.ps1`** (User env: Gmail OAuth client + any API keys). **Quit and reopen Cursor.**
+5. `npm install` → `npm start` → confirm http://localhost:5173.
+6. Confirm OneDrive `Pictures\Inventory` is syncing (physical count photos).
+7. Cloudflare later: `npx wrangler login`. Pages project **`preeminentstore`**; portal under `cloudflare-portal/`.
+8. Report: path, `git rev-parse --short HEAD`, `data\` file count, server up, env present, inventory photos path OK.
+
+Helper: `scripts/setup-hub-laptop.ps1` (code/deps only — still need the transfer pack for `data\` + env).
+
+---
+
+## 2) What “the console” owns (everything)
+
+| Work | Location |
+|------|----------|
+| Inventory UI, sales intake, orders, stock, marketing, tax, sheet sync, loans, treasure hunt | `server/`, `public/inventory*` |
+| Public store + PayPal + feed/sitemap/product SEO | `storefront/`, `cloudflare/` |
+| Cloud portal (sold / web orders / status / users) | `cloudflare-portal/` |
 | Merchant Center / Shopping / GSC | Live site + `docs/merchant-center-*.md` |
-| Physical inventory | OneDrive `Pictures\Inventory` → Sheet + local stock |
-| Sheet ledger | Inventory26 / Inventory25; sales → **Sold 2026** only |
-| Sales intake (Gmail / eBay / PayPal / web) | `server/` intake + `data\` |
-| Pricing proposals / raise-after-sale | Propose only; Marketing UI; never auto-apply |
-| Ops docs | Update relevant `docs/` when status changes |
+| Physical inventory | `Pictures\Inventory` → Sheet + `data\` stock |
+| Sheet ledger | **Inventory26** / **Inventory25**; sales → **Sold 2026** only |
+| Raise-after-sale / price proposals | Propose for owner OK; never auto-apply |
+| Ops memory | Update `docs/` when status changes |
+
+Day-to-day: diagnose → change repo/data/Sheet carefully → restart/deploy → update docs → say what needs **owner OK**.
 
 ---
 
-## C) Hard rules (always-on; also in `.cursor/rules/`)
+## 3) Hard rules (also `.cursor/rules/`)
 
-1. **Sold 2025 is locked** — never write/edit/delete.
-2. **Inventory25** may be adjusted (older stock still on hand). **New sales → Sold 2026 only.**
-3. **No price changes** without owner explicit OK. Flow: audit → propose with cost/fees/profit → wait → apply. Never below cost + fees. Cost = **highest** unit cost across rows. Existing items ≥**15%** profit on cost after fees; new items ≥**10%**. Owner-reviewed prices in `docs/price-proposal-2026-10-09.md` are locked.
-4. **Merchant Center:** never change business name / website / business info while a review is pending.
-5. **Custom decks:** sell on-site OK; **never** put back in `feed.xml`, sitemap, or Product JSON-LD; keep **noindex** on deck product pages (`cloudflare/lib/catalog.js` helpers).
-6. Never commit credentials, oauth tokens, or `data/*.json`.
-7. After changes under `server/`, restart Node on 5173 (see `.cursor/rules/restart-node-server.mdc`).
+1. **Sold 2025 locked** — no writes.
+2. **Inventory25** adjustable; **new sales → Sold 2026 only**.
+3. **No price changes** without explicit owner OK. Audit → propose (cost, fees, profit) → wait → apply. Never below cost+fees. Cost = **highest** unit cost across rows. Existing ≥**15%** profit on cost after fees; new ≥**10%**. Locked decisions: `docs/price-proposal-2026-10-09.md`.
+4. Fees model: PayPal **3.49%** of (price + shipping charged + worst-case CA tax) + **$0.49**; shipping label − shipping charged; tax is pass-through. TCGplayer ~**13%** when quoting TCG.
+5. **MC:** do not change business name / website / business info during reviews.
+6. **Custom decks:** on-site OK; **never** in `feed.xml`, sitemap, or Product JSON-LD; keep **noindex** (`cloudflare/lib/catalog.js`).
+7. Never commit `data/*.json`, credentials, oauth tokens, or transfer `set-user-env.ps1`.
+8. After `server/` changes, restart Node on **5173** automatically.
 
 ---
 
-## D) Current status snapshot (2026-10-26)
+## 4) Architecture cheat sheet
 
-### Google Merchant Center (account `5871019770`)
+```
+Owner browser
+  → localhost:5173  Node (server/index.js)  ← inventory portal, Gmail/Sheets, publish to KV
+  → preeminentstore.com  Cloudflare Pages + Functions  ← shoppers, PayPal, feed.xml, sitemap
+  → portal.preeminentstore.com  cloudflare-portal  ← cloud views / lease
+Google Sheet  ←→  server sheetLedger + Gmail OAuth (Sheets scope)
+Merchant Center  ←  https://preeminentstore.com/feed.xml  (no custom decks)
+```
 
-- **Counterfeit** suspension. Oct 16 review **rejected**. Oct 26: stronger fix deployed (feed exclude decks, sitemap omit decks, deck pages noindex / no Product LD) + **new review requested**.
-- Full timeline + appeal text: `docs/merchant-center-counterfeit-2026-10-16.md`
-- If Google asks for identity / invoices → **owner only**. Do not reintroduce decks to Shopping surfaces.
+- Publish / stock / catalog: `server/storePublish.js`, `server/storeCatalog.js`, KV binding `STORE`.
+- PayPal: `cloudflare/functions/api/paypal/*` + `data/paypal-credentials.json` / wrangler secrets as configured.
+- Gmail intake: `server/gmailOrders.js`, `server/emailIntake.js`.
+- Restart pattern: `.cursor/rules/restart-node-server.mdc`.
+
+---
+
+## 5) Status inherited from previous console (2026-10-26)
+
+### Merchant Center — Counterfeit (active)
+
+- Suspended for Counterfeit; Oct 16 review **rejected** (decks still crawlable).
+- Oct 26 hardening deployed: feed exclude decks, sitemap omit deck URLs, deck PDPs **noindex** / no Product LD; **new review requested Oct 26**.
+- Full log + appeal language: `docs/merchant-center-counterfeit-2026-10-16.md`.
+- Identity / invoice requests → **owner only**. Do not put decks back on Shopping surfaces.
+- Prior Misrepresentation issue was cleared earlier (`docs/merchant-center-misrepresentation-2026-10-13.md`).
 
 ### Site / GSC / GCR
 
-- www → apex **single-hop** 301; `.html` → clean URLs (`cloudflare/functions/_middleware.js` + CF rule).
-- Google Customer Reviews opt-in on PayPal thank-you path.
-- Intentional redirects may show as “Page with redirect” in GSC — expected.
+- www → apex **single-hop** 301; `.html` → clean URLs.
+- Google Customer Reviews opt-in on PayPal thank-you.
+- GSC “Page with redirect” on intentional redirects = expected.
 
-### Physical inventory (~30% done)
+### Physical inventory (~30%)
 
-Photo root: `OneDrive\Pictures\Inventory`  
-**Locked counts so far** (do not overwrite without re-count / owner OK):
+Photos: `OneDrive\Pictures\Inventory`  
+**Locked counts** (do not overwrite without re-count + owner OK):
 
-| Item | Count note |
-|------|------------|
+| Item | Count |
+|------|--------|
 | Uprising | 11 cases |
 | Compendium | 4 |
 | Usurp | 3 shown |
 | Charizard | 10 |
 | Paradox | 1 |
-| 30th Celebration | ETB 5, PC 2, bundles 6 |
+| 30th Celebration | ETB 5 / PC 2 / bundles 6 |
 | Knock Out | 1 |
 | Perfect Order | 2 PC + 1 regular |
 | MTG sealed | play case = **1** unit |
 
-Continue remaining photo batches → confirm with owner → Sheet + stock.
+Continue remaining batches → confirm → Sheet + stock.
 
-### Open store ops (see also `docs/store-todo.md`)
+### Pricing / marketing
 
-- TCGplayer listings still needed for several in-stock SKUs.
-- Agreed TCGplayer price raises listed in `docs/store-todo.md` (website already at those; TCG listing updates still open).
-- Year-end / tax notes in `docs/sold-2026-ytd.md` and `docs/sales-tax.md`.
+- Oct 9 audit: **no prices changed**; owner decisions locked in `docs/price-proposal-2026-10-09.md`.
+- Raise-after-sale: propose on Marketing (`raiseAfterSale` in `data/store-settings.json`); never auto-apply.
+- Open listing / TCG raise checklist: `docs/store-todo.md`.
 
----
+### Contact / brand
 
-## E) Key doc index
-
-| Doc | Why |
-|-----|-----|
-| `docs/merchant-center-counterfeit-2026-10-16.md` | MC Counterfeit — live issue |
-| `docs/merchant-center-misrepresentation-2026-10-13.md` | Prior MC issue (cleared) |
-| `docs/price-proposal-2026-10-09.md` | Locked owner price decisions |
-| `docs/limited-items-rule.md` | Show-1 / raise rules |
-| `docs/store-todo.md` | Listing / raise checklist |
-| `docs/sales-tax.md` | CA collection rules |
-| `docs/sold-2026-ytd.md` | YTD / tax prep notes |
-| `docs/name-image-audit-2026-10-14.md` | Catalog name/image mismatches |
-| `docs/portal-cloud-plan.md` | Cloud portal design |
-| `.cursor/rules/*.mdc` | Always-applied agent rules |
+- Customer email: `sales@preeminentstore.com` (forwarding configured).
+- Do not invent new public business identity during Google reviews.
 
 ---
 
-## F) Default operating mode
+## 6) Doc index (read when relevant)
 
-When the owner messages this Agent: diagnose → change repo/data/Sheet carefully → deploy/restart as needed → update the relevant docs → report what changed and **what needs owner OK** (prices, irreversible Sheet edits, Google identity steps).
+| Doc | Topic |
+|-----|--------|
+| `docs/HUB-AGENT-PROMPT.md` | First message for the new Agent |
+| `docs/merchant-center-counterfeit-2026-10-16.md` | Live MC issue |
+| `docs/price-proposal-2026-10-09.md` | Locked prices |
+| `docs/limited-items-rule.md` | Limited / show-1 rules |
+| `docs/store-todo.md` | Listings & TCG raises |
+| `docs/sales-tax.md` | CA tax |
+| `docs/sold-2026-ytd.md` | YTD / tax prep |
+| `docs/name-image-audit-2026-10-14.md` | Name/image mismatches |
+| `docs/portal-cloud-plan.md` | Cloud portal |
+| `docs/weekly-shorts.md` | Shorts pipeline |
+| `.cursor/rules/*.mdc` | Always-on agent rules |
 
-You own the full pipeline on this laptop: **portal, website, Google issues, physical inventory, and Sheet updates.**
+---
+
+## 7) First reply checklist (new Agent)
+
+After bootstrap, reply with:
+
+1. Hub path + git short SHA + `data\` file count + server status  
+2. Confirmation you own portal, website, Google, physical inventory, Sheet updates  
+3. Anything still missing (env, photos, wrangler, OneDrive)  
+4. That you will keep using **this** chat as the moved console  
+
+Then wait for the owner’s next ops task — do not stop at “setup done.”
