@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Order — The PreEminent Store</title>
+    <link rel="icon" type="image/png" href="/brand/logo.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <style>
+      @page { size: letter; margin: 0.5in; }
+      * { box-sizing: border-box; }
+      html { background: #e9e9ec; }
+      body { margin: 0; color: #1b1b1f; font: 13px/1.45 Outfit, Segoe UI, system-ui, sans-serif; }
+      .sheet { width: 8.5in; min-height: 11in; margin: 24px auto; padding: 0.5in; background: #fff; box-shadow: 0 2px 18px rgba(0, 0, 0, 0.18); }
+      .toolbar { width: 8.5in; margin: 16px auto 0; display: flex; gap: 8px; justify-content: flex-end; }
+      .toolbar button { font: 600 13px Outfit, system-ui, sans-serif; padding: 7px 14px; border-radius: 8px; border: 1px solid #c9c9cf; background: #fff; cursor: pointer; }
+      .toolbar button.primary { background: #4f46e5; border-color: #4f46e5; color: #fff; }
+      .error { width: 8.5in; margin: 40px auto; padding: 24px; background: #fff; border-radius: 10px; text-align: center; }
+
+      header { display: flex; align-items: center; gap: 14px; padding-bottom: 14px; border-bottom: 3px solid #4f46e5; }
+      header img { width: 58px; height: 58px; border-radius: 50%; object-fit: cover; }
+      .brand { flex: 1; }
+      .brand h1 { margin: 0; font: 900 22px/1.1 Cinzel, Georgia, serif; letter-spacing: 0.02em; }
+      .brand h1 em { font-style: normal; color: #4f46e5; }
+      .brand div { color: #555; font-size: 12px; }
+      .doc-title { text-align: right; }
+      .doc-title h2 { margin: 0; font: 700 18px Cinzel, Georgia, serif; text-transform: uppercase; letter-spacing: 0.08em; color: #4f46e5; }
+      .doc-title div { font-size: 12px; color: #444; }
+      .doc-title strong { color: #1b1b1f; }
+
+      .parties { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 18px 0; }
+      .parties h3, .items-title { margin: 0 0 4px; font: 700 11px Outfit, sans-serif; text-transform: uppercase; letter-spacing: 0.1em; color: #3730a3; }
+      .addr { font-size: 14px; line-height: 1.5; }
+      .addr .muted { color: #666; font-size: 12px; }
+
+      table { width: 100%; border-collapse: collapse; }
+      th { text-align: left; font: 700 11px Outfit, sans-serif; text-transform: uppercase; letter-spacing: 0.08em; color: #555; border-bottom: 2px solid #1b1b1f; padding: 6px 8px; }
+      td { padding: 9px 8px; border-bottom: 1px solid #ddd; vertical-align: top; }
+      th.num, td.num { text-align: right; white-space: nowrap; }
+      td.qty { font-weight: 700; font-size: 15px; text-align: center; width: 56px; }
+      th.qty { text-align: center; }
+      td.check { width: 40px; }
+      .box { display: inline-block; width: 18px; height: 18px; border: 2px solid #1b1b1f; border-radius: 3px; }
+      .item-name { font-weight: 600; }
+      .item-kind { color: #777; font-size: 11px; }
+
+      .totals { width: 280px; margin: 12px 0 0 auto; }
+      .totals td { border: 0; padding: 4px 8px; }
+      .totals tr.grand td { border-top: 2px solid #1b1b1f; font-weight: 700; font-size: 16px; padding-top: 8px; }
+      .paid { margin-top: 14px; padding: 10px 12px; border: 1px solid #c7d2fe; background: #eef2ff; border-radius: 8px; font-size: 13px; }
+      .paid strong { color: #3730a3; }
+
+      .thanks { margin-top: 22px; padding: 14px 16px; border-radius: 10px; border: 1px dashed #4f46e5; text-align: center; }
+      .thanks h3 { margin: 0 0 4px; font: 700 16px Cinzel, Georgia, serif; }
+      .thanks p { margin: 2px 0; }
+      .policy { margin-top: 16px; font-size: 11.5px; color: #444; }
+      .policy strong { color: #1b1b1f; }
+      footer { margin-top: 18px; padding-top: 10px; border-top: 1px solid #ddd; font-size: 11px; color: #777; text-align: center; }
+
+      @media print {
+        html { background: #fff; }
+        .toolbar { display: none; }
+        .sheet { width: auto; min-height: 0; margin: 0; padding: 0; box-shadow: none; }
+        * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="toolbar">
+      <button type="button" id="docSwitch"></button>
+      <button type="button" class="primary" onclick="window.print()">Print</button>
+    </div>
+    <div id="doc"></div>
+    <script src="/order-doc.js" defer></script>
+  </body>
+</html>

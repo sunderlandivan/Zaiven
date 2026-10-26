@@ -1,0 +1,9 @@
+---
+description: Which Google Sheet tabs may be written
+alwaysApply: true
+---
+# Inventory sheet tabs
+
+- **Sold 2025 is locked** (closed year). Never write, edit, or delete anything on it.
+- **Inventory25 may be adjusted** (e.g. sales intake lowering Qty for older stock still on hand). Treat it like Inventory26 for stock changes.
+- New sales are logged only to **Sold 2026**.

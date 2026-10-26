@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sold 2026 — PreEminent Portal</title>
+    <link rel="icon" type="image/png" href="/brand/logo.png" />
+    <link rel="stylesheet" href="/inventory.css" />
+    <link rel="stylesheet" href="/cloud.css" />
+    <script src="/cloud.js" defer></script>
+  </head>
+  <body data-page="sold-2026">
+    <div class="app-shell">
+      <aside class="nav-pane">
+        <div class="nav-brand">The PreEminent Store - Portal</div>
+        <nav class="nav-links" id="cloudNav" aria-label="Portal pages"></nav>
+      </aside>
+      <main class="nav-content">
+        <header class="content-header"><h1>Sold 2026</h1></header>
+        <p class="help" id="soldAt">The Sold 2026 tab of your Google Sheet, read-only, newest rows first.</p>
+        <section class="panel">
+          <h2>Totals</h2>
+          <div id="soldKpis" class="dashboard-kpi-grid"></div>
+        </section>
+        <section class="panel">
+          <div class="cloud-toolbar">
+            <input id="soldSearch" type="search" placeholder="Search item…" />
+            <button id="soldReload" type="button" class="subtle">Reload</button>
+          </div>
+          <div class="table-wrap scroll-x">
+            <table class="tax-sheet" id="soldTable">
+              <thead>
+                <tr><th>Date</th><th>Item</th><th class="num">Qty</th><th class="num">Sold (each)</th><th class="num">Sold total</th><th class="num">Shipping</th><th class="num">Fees</th><th class="num">Cost (each)</th></tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div class="pager" id="soldPager"></div>
+        </section>
+      </main>
+    </div>
+    <script src="/sold-2026.js" defer></script>
+  </body>
+</html>

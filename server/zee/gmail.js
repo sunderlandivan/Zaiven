@@ -1,15 +1,20 @@
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
 import crypto from "crypto";
 import axios from "axios";
 
-const DATA_DIR = path.resolve("data");
+const DATA_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "data");
 const ZEE_GMAIL_SETTINGS_PATH = path.join(DATA_DIR, "zee-gmail-settings.json");
 
 const GMAIL_AUTH_BASE_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GMAIL_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GMAIL_API_BASE_URL = "https://gmail.googleapis.com/gmail/v1/users/me";
-const GMAIL_SCOPE = "https://www.googleapis.com/auth/gmail.readonly";
+const GMAIL_SCOPES = [
+  "https://www.googleapis.com/auth/gmail.readonly",
+  "https://www.googleapis.com/auth/gmail.send",
+];
+const GMAIL_SCOPE = GMAIL_SCOPES.join(" ");
 
 function ensureDataFiles() {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -122,12 +127,21 @@ export async function getValidZeeGmailAccessToken() {
 export function getZeeGmailStatus() {
   const settings = getSavedSettings();
   const oauth = settings.oauth || {};
+  const scope = oauth.scope || null;
+  const canSend = Boolean(
+    scope && /\bgmail\.send\b|\bgmail\.modify\b|\bgmail\.compose\b|mail\.google\.com\/?$/.test(scope)
+  );
   return {
     connected: Boolean(oauth.refreshToken),
     targetEmail: getZeeGmailTargetEmail(),
-    scope: oauth.scope || null,
+    scope,
+    canSend,
     expiresAt: oauth.expiresAt || null,
   };
+}
+
+export function getZeeGmailScope() {
+  return getSavedSettings().oauth?.scope || null;
 }
 
 export function getZeeGmailAuthStartUrl() {

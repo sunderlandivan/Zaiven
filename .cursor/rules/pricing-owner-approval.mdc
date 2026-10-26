@@ -1,0 +1,16 @@
+---
+description: Never change prices without the owner's explicit OK
+alwaysApply: true
+---
+
+# Pricing changes need owner approval
+
+- **Never** change any selling price (website catalog, price overrides, TCGplayer, eBay, Facebook, feeds, promo videos/captions) unless the owner has explicitly said OK to that specific change.
+- Required order: run a price audit first (cost basis from the Sheet, current market, fees) → present the proposed price list → wait for the owner's OK → only then apply.
+- **Never price below cost + fees.** Every proposal must show cost, fees (TCGplayer ~13%, PayPal, shipping), proposed price and resulting profit; anything that would lose money is excluded, not just flagged.
+- **Owner-reviewed prices are locked.** Prices the owner has reviewed/kept (see `docs/price-proposal-2026-10-09.md` "Owner decisions") must never be changed by any automation, floor, or clamp, up or down. Only the owner's explicit OK changes them. Automatic floors are a warning/safety check for those items, never an override.
+- **Minimum profit:** existing items must clear **≥15% profit on cost**. **New items** (added after the Oct 9, 2026 review) may go as low as **≥10%**. Profit is always computed after **PayPal fees (3.49% of price + shipping + worst-case CA sales tax, + $0.49), shipping label cost minus shipping charged, and taxes** (tax is pass-through, never income).
+- **Cost baseline = the highest unit cost** among all of an item's rows (Inventory26 and any older stock), never a blended/average or lowest cost. Profit, break-even and floors are always computed from that highest cost.
+- Discount codes, sales, and "X% under market" changes count as price changes.
+- Agents may *prepare* proposals and drafts freely; applying them is the owner's call.
+- **Raise after sale (owner preference):** when a sealed item sells and stock remains, propose a website raise (default ~+$20, smaller % for cheap items; `raiseAfterSale` in `data/store-settings.json`) for owner review on Marketing. Never auto-apply.

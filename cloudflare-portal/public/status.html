@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cloud Status — PreEminent Portal</title>
+    <link rel="icon" type="image/png" href="/brand/logo.png" />
+    <link rel="stylesheet" href="/inventory.css" />
+    <link rel="stylesheet" href="/cloud.css" />
+    <script src="/cloud.js" defer></script>
+  </head>
+  <body data-page="status">
+    <div class="app-shell">
+      <aside class="nav-pane">
+        <div class="nav-brand">The PreEminent Store - Portal</div>
+        <nav class="nav-links" id="cloudNav" aria-label="Portal pages"></nav>
+      </aside>
+      <main class="nav-content">
+        <header class="content-header"><h1>Cloud Status</h1></header>
+        <section class="panel">
+          <h2>Health</h2>
+          <div id="stCards" class="dashboard-kpi-grid"><p class="muted">Loading…</p></div>
+          <div class="row" style="margin-top:10px">
+            <button id="stTick" type="button">Run checks now</button>
+            <button id="stMirror" type="button" class="subtle">Read the Sheet now</button>
+            <span class="help" id="stOut"></span>
+          </div>
+          <p class="help">Checks peek at waiting website orders and mirror Inventory26 / Sold 2026 (read-only). They run every 5 minutes on their own.</p>
+        </section>
+        <section class="panel">
+          <h2>Mode</h2>
+          <p id="stMode" class="help"></p>
+          <div class="row"><button id="stShadow" type="button" class="subtle">Make shadow</button><button id="stActive" type="button" class="subtle">Make active…</button></div>
+          <p class="help">Switch to active only after the PC portal is stopped (docs/portal-cloud-plan.md, cut-over).</p>
+        </section>
+        <section class="panel">
+          <h2>Host lease</h2>
+          <p id="stLease" class="help"></p>
+          <div class="row">
+            <button id="stLeaseRequest" type="button" class="subtle">Request handover to cloud</button>
+            <button id="stLeaseCancel" type="button" class="subtle">Cancel request</button>
+            <button id="stLeaseTake" type="button" class="subtle">Force take…</button>
+            <button id="stLeaseRelease" type="button" class="subtle">Hand back to PC…</button>
+          </div>
+          <p class="help">Only the lease holder pulls orders, writes the Sheet and pushes stock. A handover request is picked up by the PC portal on its next 5-minute cycle; the cloud claims the lease on its next tick. Force take works only once the lease has expired (20 minutes after the PC's last renewal).</p>
+        </section>
+        <section class="panel">
+          <h2>Activity</h2>
+          <div class="table-wrap scroll-x"><table class="tax-sheet" id="stActivity"></table></div>
+        </section>
+        <section class="panel">
+          <h2>Stored data</h2>
+          <div class="table-wrap scroll-x"><table class="tax-sheet" id="stDocs"></table></div>
+        </section>
+      </main>
+    </div>
+    <script src="/status.js" defer></script>
+  </body>
+</html>

@@ -1,6 +1,6 @@
 export const gmailModule = {
   id: "gmail",
-  title: "Gmail — inbox",
+  title: "Gmail Â· inbox",
   mount(el) {
     el.innerHTML = `
       <div class="zee-gmail-toolbar">
@@ -62,7 +62,7 @@ export const gmailModule = {
 
     const refresh = async () => {
       if (!list) return;
-      list.innerHTML = `<div class="zee-muted">Loading…</div>`;
+      list.innerHTML = `<div class="zee-muted">Loadingâ€¦</div>`;
       try {
         const res = await fetch("/api/zee/gmail/messages?max=10");
         const j = await res.json();

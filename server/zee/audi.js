@@ -1,10 +1,13 @@
 import fs from "fs";
 import path from "path";
 
+const DEFAULT_AUDI_HERO = path.join(process.cwd(), "public", "zee", "assets", "audi-hero.png");
+
 export function getAudiImagePath() {
   const configured = String(process.env.ZEE_AUDI_IMAGE_PATH || "").trim();
-  if (!configured) return "";
-  return path.resolve(configured);
+  if (configured) return path.resolve(configured);
+  if (fs.existsSync(DEFAULT_AUDI_HERO)) return DEFAULT_AUDI_HERO;
+  return "";
 }
 
 export function createAudiImageHandler() {

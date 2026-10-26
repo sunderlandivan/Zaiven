@@ -1,7 +1,8 @@
 const $ = (id) => document.getElementById(id);
 const page = document.body.dataset.page || "import";
 
-const filePathEl = $("filePath");
+const inventoryFileEl = $("inventoryFile");
+const inventoryFileNameEl = $("inventoryFileName");
 const importBtn = $("importBtn");
 const scanBtn = $("scanBtn");
 const reloadBtn = $("reloadBtn");
@@ -66,6 +67,11 @@ function setStatus(text) {
   if (statusEl) statusEl.textContent = text;
 }
 
+/** In-stock only: portal tables hide qty 0 lines (import still keeps them). */
+function inStockForPortal(item) {
+  return Number(item?.quantity || 0) > 0;
+}
+
 function getGameCategory(productName) {
   const n = String(productName || "").toLowerCase();
   if (n.includes("pokemon") || n.includes("pok ")) return "pokemon";
@@ -94,13 +100,6 @@ function confidenceBreakdown(item) {
   return `Market data: ${marketPoints}/40, Margin: ${marginPoints.toFixed(
     1
   )}/40, Profit: ${profitPoints.toFixed(1)}/30, Qty: ${qtyPoints}/20`;
-}
-
-function workflowStatusBadge(item) {
-  const status = item.workflow?.status || "none";
-  if (status === "sold") return '<span class="status-badge sold">Sold</span>';
-  if (status === "listed") return '<span class="status-badge listed">Listed</span>';
-  return '<span class="status-badge none">None</span>';
 }
 
 function sourceCell(item) {
@@ -140,6 +139,7 @@ function filteredItems(items) {
   const category = String(categoryFilterEl?.value || "all");
   const minTotalProfit = Number(minProfitFilterEl?.value || 0);
   return items.filter((item) => {
+    if (!inStockForPortal(item)) return false;
     const hasSheetLink = Boolean(item?.market?.sheetProductUrl);
     const itemCategory = getGameCategory(item.productName);
     const profit = Number(item.metrics.totalBestProfit || 0);
@@ -151,6 +151,7 @@ function filteredItems(items) {
 function filteredLoserItems(items) {
   const category = String(categoryFilterEl?.value || "all");
   return items.filter((item) => {
+    if (!inStockForPortal(item)) return false;
     const hasSheetLink = Boolean(item?.market?.sheetProductUrl);
     const itemCategory = getGameCategory(item.productName);
     const profit = Number(item.metrics.totalBestProfit || 0);
@@ -164,8 +165,12 @@ async function api(url, options = {}) {
     headers: { "Content-Type": "application/json" },
     ...options,
   });
-  const json = await res.json();
-  if (!json.ok) throw new Error(json.error || "Request failed");
+  const json = await res.json().catch(() => ({ ok: false, error: `HTTP ${res.status}` }));
+  if (!json.ok) {
+    const err = new Error(json.error || "Request failed");
+    err.status = res.status;
+    throw err;
+  }
   return json;
 }
 
@@ -200,16 +205,16 @@ function renderTotals(dashboard) {
   totalsEl.innerHTML = `
     <div class="cards">
       <div class="card"><div class="card-label">Units</div><div class="card-value">${t.units}</div></div>
-      <div class="card"><div class="card-label">Cost basis</div><div class="card-value">${money(t.costBasis)}</div></div>
-      <div class="card"><div class="card-label">Market value (estimate)</div><div class="card-value">${money(t.marketValue)}</div></div>
+      <div class="card"><div class="card-label">Total cost (what you paid)</div><div class="card-value">${money(t.costBasis)}</div></div>
+      <div class="card"><div class="card-label">Listed value (estimate)</div><div class="card-value">${money(t.marketValue)}</div></div>
       <div class="card" title="Sum of each line: (TCGplayer market after fees − your cost) × quantity. Negative means underwater lines outweigh winners.">
-        <div class="card-label">Est. net profit (all lines)</div><div class="card-value">${money(t.bestProfit)}</div>
+        <div class="card-label">Estimated profit (all items)</div><div class="card-value">${money(t.bestProfit)}</div>
       </div>
-      <div class="card" title="Sum of line profit only where profit is positive.">
-        <div class="card-label">Est. profit (winning lines only)</div><div class="card-value">${money(winners)}</div>
+        <div class="card" title="Sum of line profit only where profit is positive.">
+        <div class="card-label">Estimated profit (only winning items)</div><div class="card-value">${money(winners)}</div>
       </div>
     </div>
-    <p class="help totals-explainer">Net profit is the sum across every SKU; it can be negative if your estimated losses on some lines are larger than gains on others.</p>
+    <p class="help totals-explainer">Net profit adds every item together; it can go negative if losing items outweigh winners.</p>
   `;
 }
 
@@ -303,12 +308,6 @@ function renderSellThisWeek(dashboard) {
       <td>${money(item.metrics.bestProfitPerUnit)}</td>
       <td>${money(item.metrics.totalBestProfit)}</td>
       <td><span title="${breakdown}">${score}%</span></td>
-      <td>${workflowStatusBadge(item)}</td>
-      <td>
-        <button class="table-btn subtle" data-action="listed" data-item-id="${item.id}" data-platform="${item.metrics.bestPlatform}">Mark listed</button>
-        <button class="table-btn" data-action="sold" data-item-id="${item.id}" data-platform="${item.metrics.bestPlatform}">Mark sold</button>
-        <button class="table-btn subtle" data-action="reset" data-item-id="${item.id}">Reset</button>
-      </td>
     `;
     sellWeekTableBody.appendChild(row);
   }
@@ -360,8 +359,29 @@ function renderOrders(orders) {
       return order.stampAuto ? "No tracking needed (stamp, auto)" : "No tracking needed (stamp)";
     }
     if (String(order.trackingNumber || "").trim()) return "Tracked";
+    if (order.trackingState === "canceled") return "Canceled";
+    if (order.trackingState === "singles_no_tracking") return "No tracking (singles)";
     if (isLikelyStampShipment(order)) return "Likely stamp (shipping ~1.27)";
     return "Missing tracking";
+  };
+  const badge = (text, cls) => (text ? `<span class="badge ${cls}">${escapeHtml(text)}</span>` : "");
+  const orderStatusBadge = (status) => {
+    const s = String(status || "").toLowerCase();
+    const cls = /cancel|refund|return/.test(s)
+      ? "cancel"
+      : /deliver|complete|paid/.test(s)
+        ? "paid"
+        : /ship|transit/.test(s)
+          ? "ship"
+          : /pend|await|process|ready|new|open/.test(s)
+            ? "wait"
+            : "";
+    return badge(status, cls);
+  };
+  const trackingBadge = (order) => {
+    const label = trackingStatusLabel(order);
+    const cls = label === "Tracked" ? "paid" : label === "Missing tracking" ? "wait" : "";
+    return badge(label, cls);
   };
   for (const order of orders) {
     const row = document.createElement("tr");
@@ -377,13 +397,13 @@ function renderOrders(orders) {
       <td>${order.buyerName || ""}</td>
       <td>${order.purchaseDate || ""}</td>
       <td>${order.platform || ""}</td>
-      <td>${order.status || ""}</td>
+      <td>${orderStatusBadge(order.status)}</td>
       <td>${order.shippingType || ""}</td>
       <td>${money(order.salePrice)}</td>
       <td>${money(order.shippingCost)}</td>
       <td>${money(order.feeAmount)}</td>
       <td>${money(order.orderAmount)}</td>
-      <td>${trackingStatusLabel(order)}</td>
+      <td>${trackingBadge(order)}</td>
       <td>${uspsTrackingCell(order.trackingNumber)}</td>
     `;
     ordersTableBody.appendChild(row);
@@ -393,7 +413,74 @@ function renderOrders(orders) {
 function orderTrackingFilterCategory(order) {
   if (order.noTrackingNeeded) return "stamp";
   if (String(order.trackingNumber || "").trim()) return "tracked";
+  if (order.trackingState === "singles_no_tracking") return "singles";
+  if (order.trackingState === "canceled") return "canceled";
   return "missing";
+}
+
+async function loadLabelSuggestions() {
+  const panel = document.getElementById("labelSuggestionsPanel");
+  const list = document.getElementById("labelSuggestionsList");
+  const note = document.getElementById("labelSuggestionsSummary");
+  if (!panel || !list) return;
+  let result;
+  try {
+    result = await api("/api/orders/label-matches");
+  } catch (error) {
+    panel.hidden = true;
+    if (error.status === 404) return;
+    throw error;
+  }
+  panel.hidden = false;
+  const items = Array.isArray(result.suggestions) ? result.suggestions : [];
+  const s = result.summary;
+  if (note) {
+    note.textContent = s
+      ? `${s.labels} USPS labels found: ${s.autoApplied} auto-applied, ${s.alreadyTracked} already on orders, ${items.length} to review, ${s.unmatched} unmatched.`
+      : "No label scan yet. Run a Gmail sync.";
+  }
+  list.innerHTML = "";
+  if (!items.length) {
+    list.innerHTML = `<p class="help">Nothing to review.</p>`;
+    return;
+  }
+  for (const label of items) {
+    const card = document.createElement("div");
+    card.className = "panel";
+    const options = label.candidates
+      .map(
+        (c) =>
+          `<option value="${escapeHtml(c.orderNumber)}">${escapeHtml(c.orderNumber)} · ${escapeHtml(c.purchaseDate)} · ${money(
+            c.orderAmount
+          )} · ${escapeHtml(c.productName || "")} (${escapeHtml(c.reasons.join(", "))})</option>`
+      )
+      .join("");
+    card.innerHTML = `
+      <p><strong>${escapeHtml(label.tracking)}</strong> · ${escapeHtml(label.labelDate)} · ${escapeHtml(
+        label.recipientName || ""
+      )}, ${escapeHtml(label.city || "")} ${escapeHtml(label.state || "")} · ${money(label.cost)}</p>
+      <div class="row">
+        <select>${options}</select>
+        <button type="button" data-act="confirm">Use this order</button>
+        <button type="button" class="subtle" data-act="dismiss">Not an order</button>
+      </div>`;
+    const select = card.querySelector("select");
+    card.addEventListener("click", async (e) => {
+      const act = e.target?.dataset?.act;
+      if (!act) return;
+      try {
+        await api(`/api/orders/label-matches/${act}`, {
+          method: "POST",
+          body: JSON.stringify({ tracking: label.tracking, orderNumber: select.value }),
+        });
+        setStatus(act === "confirm" ? `Tracking ${label.tracking} added to ${select.value}.` : "Label dismissed.");
+        await Promise.all([loadOrders(), loadLabelSuggestions()]);
+      } catch (error) {
+        setStatus(`Label ${act} failed: ${error.message}`);
+      }
+    });
+    list.appendChild(card);
+  }
 }
 
 function initOrderFilterDefaults() {
@@ -517,7 +604,12 @@ function renderGmailStatus(status) {
   const floor = status.earliestAfter
     ? ` Search includes mail on or after ${status.earliestAfter} (Gmail “after” date).`
     : " No calendar floor on Gmail search (set GMAIL_SYNC_AFTER to add one).";
-  gmailSyncStatusEl.textContent = `Gmail connected.${floor} Last sync time: ${last}.${summaryText}`;
+  const ordersCount = Number(status.ordersInDatabase || 0);
+  const ordersNote =
+    ordersCount === 0
+      ? " No orders in your database yet — import a TCGplayer CSV or run Sync Gmail (full YTD) to pull seller emails into the list."
+      : ` ${ordersCount} order(s) in database.`;
+  gmailSyncStatusEl.textContent = `Gmail connected.${floor}${ordersNote} Last sync time: ${last}.${summaryText}`;
 }
 
 async function loadGmailStatus() {
@@ -531,16 +623,48 @@ async function loadGmailStatus() {
 }
 
 
+async function uploadInventoryFile(file) {
+  const res = await fetch("/api/inventory/import-upload", {
+    method: "POST",
+    headers: {
+      "Content-Type":
+        file.type || "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "X-Original-Filename": encodeURIComponent(file.name),
+    },
+    body: file,
+  });
+  const data = await res.json();
+  if (!res.ok || !data.ok) throw new Error(data.error || "Import failed");
+  return data;
+}
+
+inventoryFileEl?.addEventListener("change", () => {
+  const file = inventoryFileEl.files?.[0];
+  if (inventoryFileNameEl) {
+    inventoryFileNameEl.textContent = file ? file.name : "No file selected";
+  }
+  if (importBtn) importBtn.disabled = !file;
+});
+
 importBtn?.addEventListener("click", async () => {
+  const file = inventoryFileEl?.files?.[0];
+  if (!file) {
+    setStatus("Choose an Excel file first.");
+    return;
+  }
   try {
-    setStatus("Importing inventory...");
-    await api("/api/inventory/import", {
-      method: "POST",
-      body: JSON.stringify({ filePath: filePathEl.value.trim() }),
-    });
+    importBtn.disabled = true;
+    setStatus(`Uploading ${file.name}…`);
+    const { result } = await uploadInventoryFile(file);
+    const sheetPart = result?.sheetName ? ` from sheet “${result.sheetName}”` : "";
+    setStatus(`${result?.itemCount ?? 0} row(s) imported${sheetPart}. Starting price refresh...`);
     await refreshPricesAndDashboard();
+    const dash = (await api("/api/inventory/dashboard")).data;
+    setStatus(`${result?.itemCount ?? 0} row(s) imported${sheetPart}. ${pricingStatusMessage(dash)}`);
   } catch (error) {
     setStatus(`Import failed: ${error.message}`);
+  } finally {
+    if (importBtn) importBtn.disabled = !inventoryFileEl?.files?.[0];
   }
 });
 
@@ -603,40 +727,6 @@ categoryFilterEl?.addEventListener("change", () => {
 minProfitFilterEl?.addEventListener("input", () => {
   if (!lastDashboard) return;
   renderDashboard(lastDashboard);
-});
-
-sellWeekTableBody?.addEventListener("click", async (event) => {
-  const button = event.target.closest("button[data-action]");
-  if (!button) return;
-  const action = button.dataset.action;
-  const itemId = button.dataset.itemId;
-  const platform = button.dataset.platform || null;
-  if (!itemId || !action) return;
-
-  try {
-    if (action === "sold") {
-      const qtyInput = window.prompt("How many units sold?", "1");
-      if (qtyInput === null) return;
-      const qty = Number(qtyInput);
-      if (!Number.isFinite(qty) || qty <= 0) {
-        setStatus("Sold action cancelled: quantity must be at least 1.");
-        return;
-      }
-      await api("/api/inventory/workflow", {
-        method: "POST",
-        body: JSON.stringify({ itemId, action, platform, quantitySold: qty }),
-      });
-    } else {
-      await api("/api/inventory/workflow", {
-        method: "POST",
-        body: JSON.stringify({ itemId, action, platform }),
-      });
-    }
-    await loadDashboard();
-    setStatus(`Item workflow updated: ${action}.`);
-  } catch (error) {
-    setStatus(`Workflow update failed: ${error.message}`);
-  }
 });
 
 orderForm?.addEventListener("submit", async (e) => {
@@ -739,6 +829,7 @@ async function runGmailSync({ fullRescan, label }) {
   });
   await loadOrders();
   await loadGmailStatus();
+  await loadLabelSuggestions().catch(() => {});
   setStatus(
     `Gmail sync complete: ${result.result.mergedRecords} merged (${result.result.inserted} inserted, ${result.result.updated} updated).`
   );
@@ -761,7 +852,6 @@ syncGmailFullBtn?.addEventListener("click", async () => {
 });
 
 
-if (filePathEl) filePathEl.value = "C:\\Users\\TheIv\\Downloads\\PreEminent Inventory.xlsx";
 if (ordersCsvPathEl) {
   ordersCsvPathEl.value = "C:\\Users\\TheIv\\Downloads\\TCGplayer_OrderList_20260430_074335.csv";
 }
@@ -777,7 +867,7 @@ if (page === "import") {
   ordersTrackingStatusFilter?.addEventListener("change", applyOrderFiltersAndRender);
   ordersDateFrom?.addEventListener("change", applyOrderFiltersAndRender);
   ordersDateTo?.addEventListener("change", applyOrderFiltersAndRender);
-  Promise.all([loadOrders(), loadGmailStatus()]).catch((e) =>
-    setStatus(`Order load failed: ${e.message}`)
-  );
+  loadOrders().catch((e) => setStatus(`Order load failed: ${e.message}`));
+  loadGmailStatus();
+  loadLabelSuggestions().catch((e) => setStatus(`Tracking suggestions failed: ${e.message}`));
 }

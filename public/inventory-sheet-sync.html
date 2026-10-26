@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Sheet Sync — The PreEminent Store - Portal</title>
+    <link rel="icon" type="image/png" href="/brand/logo.png" />
+    <link rel="stylesheet" href="/inventory.css" />
+    <script src="/portal-ui.js"></script>
+  </head>
+  <body data-page="sheet-sync">
+    <div class="app-shell">
+      <aside class="nav-pane">
+        <div class="nav-brand">The PreEminent Store - Portal</div>
+        <nav class="nav-links">
+          <div class="nav-group">Daily</div>
+          <a class="nav-link" href="/inventory-orders.html">Order Tracking</a>
+          <a class="nav-link" href="/inventory-stock.html">Inventory</a>
+          <div class="nav-group">Business</div>
+          <a class="nav-link active" href="/inventory-sheet-sync.html">Sheet Sync</a>
+          <a class="nav-link" href="/inventory-analytics.html">Selling Analytics</a>
+          <a class="nav-link" href="/inventory-dashboard-analytics.html">Dashboard Analytics</a>
+          <a class="nav-link" href="/inventory-marketing.html">Marketing</a>
+          <a class="nav-link" href="/inventory-import.html">Import and Pricing</a>
+          <a class="nav-link" href="/inventory-treasure-hunt.html">Treasure Hunt</a>
+          <div class="nav-group">Owner</div>
+          <a class="nav-link" href="/inventory-tax-prep.html">Tax Prep</a>
+          <a class="nav-link" href="/inventory-loan.html">Loan</a>
+        </nav>
+      </aside>
+      <main class="nav-content">
+        <header class="content-header tax-prep-header">
+          <div class="page-heading">
+            <h1>Sheet Sync</h1>
+            <p class="page-subtitle">Turns purchase and sale emails into updates on the Google inventory sheet.</p>
+          </div>
+          <div class="row tax-prep-toolbar">
+            <button id="syncRunBtn" type="button">Run now</button>
+            <button id="syncReloadBtn" type="button" class="subtle">Reload</button>
+          </div>
+        </header>
+
+        <p class="help">
+          Reads purchase emails (Pokemon Center, Target, Walmart, Costco, Amazon, TCGplayer, distributors) and sale emails
+          (TCGplayer, eBay) from your Gmail, then updates the <strong>Poke Inventory</strong> Google Sheet: purchases raise
+          Qty or add rows in <strong>Inventory26</strong>; sales add a row to <strong>Sold 2026</strong> and lower Qty on the
+          matched item. Confident matches are written automatically; anything unsure waits below for you.
+        </p>
+
+        <section class="panel">
+          <h2>Connection</h2>
+          <div id="syncKpis" class="dashboard-kpi-grid"></div>
+          <div class="row sync-actions">
+            <button id="syncConnectBtn" type="button">Connect Google (Gmail + Sheets)</button>
+            <button id="syncTestBtn" type="button" class="subtle">Test sheet access</button>
+          </div>
+          <div id="syncTestResult" class="help"></div>
+          <details class="sync-setup">
+            <summary>One-time setup checklist</summary>
+            <ol class="help">
+              <li>Sign in below with the account that owns or can edit the Poke Inventory sheet (<strong>iv3nsun@gmail.com</strong>).</li>
+              <li>In Google Cloud Console (same project as your Gmail client ID), enable the <strong>Google Sheets API</strong>.</li>
+              <li>On the OAuth consent screen, set publishing status to <strong>In production</strong> so the login doesn't expire every 7 days.</li>
+              <li>Click <strong>Connect Google</strong> above, sign in as iv3nsun@gmail.com, and approve Gmail + Sheets.</li>
+              <li>Click <strong>Test sheet access</strong>, it should list Inventory26, Sold 2026 and Inventory25.</li>
+            </ol>
+          </details>
+        </section>
+
+        <section class="panel">
+          <div class="tax-section-head">
+            <h2>Needs review</h2>
+          </div>
+          <div id="reviewList"></div>
+          <p id="reviewEmpty" class="help" hidden>Nothing waiting — everything found so far was handled automatically.</p>
+        </section>
+
+        <section class="panel">
+          <h2>Recent sheet updates</h2>
+          <div class="table-wrap tax-table-wrap">
+            <table class="tax-sheet" id="recentTable">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Source</th>
+                  <th>Type</th>
+                  <th>Items</th>
+                  <th>What changed in the sheet</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="tax-section-head">
+            <h2>Settings</h2>
+            <button id="syncSaveSettingsBtn" type="button" class="subtle">Save settings</button>
+          </div>
+          <div class="loan-meta-grid">
+            <label><span><input id="setEnabled" type="checkbox" /> Run automatically</span></label>
+            <label><span><input id="setAutoApply" type="checkbox" /> Auto-write confident matches</span></label>
+            <label>Check every (minutes)<input id="setInterval" type="number" min="5" max="720" /></label>
+            <label>Only process emails on/after<input id="setTrackFrom" type="date" /></label>
+            <label>New purchases go to tab<input id="setPurchaseTab" type="text" /></label>
+            <label>Sales log tab<input id="setSoldTab" type="text" /></label>
+            <label class="loan-meta-span">Tabs to look in for sold items (comma separated)<input id="setStockTabs" type="text" /></label>
+            <label class="loan-meta-span">Distributor / other store email domains (comma separated)<input id="setSenders" type="text" /></label>
+            <label class="loan-meta-span">Google Sheet ID<input id="setSheetId" type="text" /></label>
+          </div>
+          <p class="help">
+            "Only process emails on/after" prevents re-logging sales you already entered by hand. Leave it at the day you
+            turned this on unless you want to backfill.
+          </p>
+        </section>
+
+        <p id="syncStatus" class="status"></p>
+      </main>
+    </div>
+    <script type="module" src="/inventory-nav.js"></script>
+    <script src="/inventory-sheet-sync.js" defer></script>
+  </body>
+</html>

@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Dashboard Analytics — TCG Inventory</title>
+    <link rel="icon" type="image/png" href="/brand/logo.png" />
+    <link rel="stylesheet" href="/inventory.css" />
+    <script src="/portal-ui.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" crossorigin="anonymous"></script>
+  </head>
+  <body data-page="dashboard">
+    <div class="app-shell">
+      <aside class="nav-pane">
+        <div class="nav-brand">The PreEminent Store - Portal</div>
+        <nav class="nav-links">
+          <div class="nav-group">Daily</div>
+          <a class="nav-link" href="/inventory-orders.html">Order Tracking</a>
+          <a class="nav-link" href="/inventory-stock.html">Inventory</a>
+          <div class="nav-group">Business</div>
+          <a class="nav-link" href="/inventory-sheet-sync.html">Sheet Sync</a>
+          <a class="nav-link" href="/inventory-analytics.html">Selling Analytics</a>
+          <a class="nav-link active" href="/inventory-dashboard-analytics.html">Dashboard Analytics</a>
+          <a class="nav-link" href="/inventory-marketing.html">Marketing</a>
+          <a class="nav-link" href="/inventory-import.html">Import and Pricing</a>
+          <a class="nav-link" href="/inventory-treasure-hunt.html">Treasure Hunt</a>
+          <div class="nav-group">Owner</div>
+          <a class="nav-link" href="/inventory-tax-prep.html">Tax Prep</a>
+          <a class="nav-link" href="/inventory-loan.html">Loan</a>
+        </nav>
+      </aside>
+      <main class="nav-content">
+        <header class="content-header">
+          <div class="page-heading">
+            <h1>Dashboard Analytics</h1>
+            <p class="page-subtitle">Charts of inventory value, profit and monthly order totals.</p>
+          </div>
+        </header>
+
+        <p class="help">
+          Numbers come from your last import, market refresh, and saved orders. In-stock charts match Selling Analytics
+          (at least one copy on hand and a TCG link). The “what you paid vs listed value” chart uses every row in your
+          file, including zero quantity.
+        </p>
+
+        <section class="panel">
+          <h2>At a glance</h2>
+          <div id="dashboardKpis" class="dashboard-kpi-grid"></div>
+        </section>
+
+        <section class="panel">
+          <h2>Inventory and profit</h2>
+          <div class="dashboard-chart-grid">
+            <div class="chart-surface chart-surface--wide">
+              <h3>Winning items — estimated profit over time</h3>
+              <p class="help">
+                Total estimated profit from items with positive line profit only (same as Import and Pricing). Points are
+                saved on each import and price refresh. Imports before this chart existed are not included.
+              </p>
+              <div class="chart-wrap chart-wrap--tall"><canvas id="chartWinnersOverTime" aria-label="Winning items profit over time line chart"></canvas></div>
+            </div>
+            <div class="chart-surface">
+              <h3>Who is up or down (in-stock)</h3>
+              <p class="help">Based on today’s TCG list price and fees, compared to what you paid per unit.</p>
+              <div class="chart-wrap"><canvas id="chartProfitMix" aria-label="Profit mix doughnut chart"></canvas></div>
+            </div>
+            <div class="chart-surface">
+              <h3>Margin ranges</h3>
+              <p class="help">How many items fall into each profit-margin bucket (after fees vs list price).</p>
+              <div class="chart-wrap"><canvas id="chartMarginBins" aria-label="Margin polar chart"></canvas></div>
+            </div>
+            <div class="chart-surface">
+              <h3>What you paid vs listed value</h3>
+              <p class="help">Total dollars: your costs vs what the app thinks the stack is worth at list price.</p>
+              <div class="chart-wrap"><canvas id="chartCostVsMarket" aria-label="Cost versus market bar chart"></canvas></div>
+            </div>
+            <div class="chart-surface">
+              <h3>Product types</h3>
+              <p class="help">Rough groups from the product name (booster box, ETB, bundle, and so on).</p>
+              <div class="chart-wrap"><canvas id="chartFormatMix" aria-label="Product format pie chart"></canvas></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>Orders and categories</h2>
+          <div class="dashboard-chart-grid">
+            <div class="chart-surface">
+              <h3>Order dollars by month</h3>
+              <p class="help">Each month this year: add up the order total field from your saved orders.</p>
+              <div class="chart-wrap"><canvas id="chartOrdersGmv" aria-label="Order dollars by month line chart"></canvas></div>
+            </div>
+            <div class="chart-surface">
+              <h3>Estimated profit by game</h3>
+              <p class="help">Pokemon, Magic, and so on — only in-stock items that already have a price.</p>
+              <div class="chart-wrap"><canvas id="chartCategoryProfit" aria-label="Category profit horizontal bar chart"></canvas></div>
+            </div>
+            <div class="chart-surface">
+              <h3>Best moneymakers (top 10)</h3>
+              <p class="help">Single items that would earn the most total dollars at today’s list price (in-stock, priced).</p>
+              <div class="chart-wrap"><canvas id="chartTopSkus" aria-label="Top items by profit horizontal bar chart"></canvas></div>
+            </div>
+          </div>
+        </section>
+
+        <p id="dashboardStatus" class="status"></p>
+      </main>
+    </div>
+    <script type="module" src="/inventory-nav.js"></script>
+    <script src="/inventory-dashboard-charts.js" defer></script>
+  </body>
+</html>

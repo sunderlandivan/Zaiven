@@ -5,6 +5,29 @@ let weatherTimer = 0;
 
 const PERRIS_LAT = 33.7825;
 const PERRIS_LON = -117.2286;
+const RADAR_OPEN_URL = "https://www.rainviewer.com/map.html?loc=33.7825,-117.2286,8";
+
+function lngLatToTile(lon, lat, zoom) {
+  const z = Math.max(1, Number(zoom) || 8);
+  const x = Math.floor(((lon + 180) / 360) * Math.pow(2, z));
+  const latRad = (lat * Math.PI) / 180;
+  const y = Math.floor(
+    ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * Math.pow(2, z)
+  );
+  return { x, y, z };
+}
+
+async function fetchRadarThumbUrl() {
+  const tile = lngLatToTile(PERRIS_LON, PERRIS_LAT, 8);
+  const res = await fetch("https://api.rainviewer.com/public/weather-maps.json");
+  const j = await res.json();
+  const host = String(j?.host || "https://tilecache.rainviewer.com");
+  const frames = Array.isArray(j?.radar?.past) ? j.radar.past : [];
+  const last = frames.length ? frames[frames.length - 1] : null;
+  const framePath = String(last?.path || "");
+  if (!framePath) throw new Error("No radar frame path");
+  return `${host}${framePath}/256/${tile.z}/${tile.x}/${tile.y}/2/1_1.png`;
+}
 
 async function fetchLocalWeather() {
   const u = new URL("https://api.open-meteo.com/v1/forecast");
@@ -39,6 +62,13 @@ export const timeModule = {
             <div class="zee-moon-name" id="zee-moon-name"></div>
             <div class="zee-moon-illum" id="zee-moon-illum"></div>
           </div>
+          <img
+            id="zee-weather-radar"
+            class="zee-weather-radar"
+            alt="Perris radar"
+            loading="lazy"
+            title="Open Perris radar"
+          />
         </div>
         <div class="zee-weather" id="zee-weather">
           <div class="zee-weather-title">Perris, CA 92571</div>
@@ -65,6 +95,18 @@ export const timeModule = {
         disc.style.setProperty("--lit", String(lit));
       }
     };
+    const radarEl = /** @type {HTMLImageElement | null} */ (el.querySelector("#zee-weather-radar"));
+    radarEl?.addEventListener("click", () => {
+      window.open(RADAR_OPEN_URL, "_blank", "noopener");
+    });
+    const updateRadar = async () => {
+      if (!radarEl) return;
+      try {
+        radarEl.src = await fetchRadarThumbUrl();
+      } catch {
+        radarEl.src = "https://tilecache.rainviewer.com/v2/radar/nowcast_0/256/8/43/102/2/1_1.png";
+      }
+    };
     const updateWeather = async () => {
       try {
         const w = await fetchLocalWeather();
@@ -83,6 +125,7 @@ export const timeModule = {
     };
     tick();
     updateWeather();
+    updateRadar();
     timer = window.setInterval(tick, 1000);
     weatherTimer = window.setInterval(updateWeather, 300000);
     return {

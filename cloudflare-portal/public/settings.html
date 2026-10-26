@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Store Settings — PreEminent Portal</title>
+    <link rel="icon" type="image/png" href="/brand/logo.png" />
+    <link rel="stylesheet" href="/inventory.css" />
+    <link rel="stylesheet" href="/cloud.css" />
+    <script src="/cloud.js" defer></script>
+  </head>
+  <body data-page="settings">
+    <div class="app-shell">
+      <aside class="nav-pane">
+        <div class="nav-brand">The PreEminent Store - Portal</div>
+        <nav class="nav-links" id="cloudNav" aria-label="Portal pages"></nav>
+      </aside>
+      <main class="nav-content">
+        <header class="content-header"><h1>Store Settings</h1></header>
+        <p class="help">What the website uses for shipping, Zelle/Venmo checkout, sales tax and price overrides, plus the Sheet the portal reads. Owner only.</p>
+        <div id="setBody"><p class="muted">Loading…</p></div>
+        <section class="panel">
+          <h2>Edit (JSON)</h2>
+          <textarea id="setJson" rows="18" readonly style="width:100%;font:12px ui-monospace,monospace;background:#0c1015;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:10px"></textarea>
+          <div class="row" style="margin-top:8px"><button id="setSave" type="button">Save</button><span class="help" id="setOut"></span></div>
+        </section>
+      </main>
+    </div>
+    <script src="/settings.js" defer></script>
+  </body>
+</html>

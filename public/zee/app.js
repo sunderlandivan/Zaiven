@@ -3,6 +3,7 @@ import { bus } from "./core/bus.js";
 import {
   connectZeeVoice,
   disconnectZeeVoice,
+  endZeeVoiceSession,
   setMicMuted,
   setVoiceStatus,
   setVoiceHeard,
@@ -19,6 +20,10 @@ import { gmailModule } from "./modules/gmail/module.js";
 import { musicModule } from "./modules/music/module.js";
 import { youtubeModule } from "./modules/youtube/module.js";
 import { systemModule } from "./modules/system/module.js";
+import { homeNetworkModule } from "./modules/home-network/module.js";
+import { smartHomeModule } from "./modules/smart-home/module.js";
+import { communicationsModule } from "./modules/communications/module.js";
+import { ringModule } from "./modules/ring/module.js";
 
 const grid = document.getElementById("zee-grid");
 const btnVoice = document.getElementById("zee-btn-voice");
@@ -29,11 +34,24 @@ const wakeStatus = document.getElementById("zee-wake-status");
 const micMeter = document.getElementById("zee-mic-meter");
 const root = document.getElementById("zee-root");
 
-[timeModule, stocksModule, newsModule, audiModule, gmailModule, musicModule, youtubeModule, systemModule].forEach((m) =>
-  registry.register(m)
-);
+[
+  timeModule,
+  stocksModule,
+  homeNetworkModule,
+  newsModule,
+  audiModule,
+  gmailModule,
+  musicModule,
+  smartHomeModule,
+  ringModule,
+  communicationsModule,
+  youtubeModule,
+  systemModule,
+].forEach((m) => registry.register(m));
 
-if (grid) registry.mountAll(grid);
+if (grid) {
+  registry.mountAll(grid);
+}
 
 setVoiceStatus((s) => {
   if (voiceStatus) voiceStatus.textContent = s;
@@ -66,6 +84,22 @@ let wakeNetworkErrorCount = 0;
 let wakeNetworkWindowStart = 0;
 let wakeUnstable = false;
 const LEGACY_ALWAYS_ON_VOICE = true;
+const PASSIVE_WAKE_ENABLED = true;
+let passiveWakeRecognizer = null;
+let passiveWakeFollowupUntil = 0;
+let passiveWakeOffTimer = 0;
+let passiveWakeActivating = false;
+let passiveWakeReady = false;
+let passiveWakePendingGesture = false;
+let wakeEventSource = null;
+let passiveWakeSessionUntil = 0;
+const PASSIVE_WAKE_SESSION_MS = 5000;
+let passiveWakeWatchdog = 0;
+// When the user explicitly ends a session, ignore wake events for a window
+// so a stray "zee" mention doesn't immediately reconnect (and resume billing).
+let wakeCooldownUntil = 0;
+const WAKE_COOLDOWN_MS = 60_000;
+let wakeCooldownTickTimer = 0;
 
 if (wakeStatus) {
   const supported = Boolean(window.SpeechRecognition || window.webkitSpeechRecognition);
@@ -134,7 +168,11 @@ function setVoiceArmedUi() {
 }
 
 function setWakeLabelSleeping() {
-  if (wakeStatus) wakeStatus.textContent = wakeUnstable ? "Wake: unstable (direct listen mode)" : "Wake: ready (say 'Zee ...')";
+  if (wakeStatus) {
+    wakeStatus.textContent = wakeUnstable
+      ? "Wake: unstable (direct listen mode)"
+      : `Wake: ready (say "Z, are you there?")`;
+  }
 }
 
 async function sleepRealtime(reason = "idle") {
@@ -195,12 +233,38 @@ function getWakeWordRecognizer() {
   return recog;
 }
 
+function normalizeWakePhrase(text) {
+  return String(text || "")
+    .toLowerCase()
+    .replace(/[^a-z]+/g, "")
+    .trim();
+}
+
+// Accepted wake phrases (must match server/zee/wake.js grammar).
+const WAKE_PHRASES = [
+  "zareyouthere",
+];
+
 function parseWakeCommand(text) {
   const cleaned = String(text || "").trim();
   if (!cleaned) return { woke: false, cmd: "" };
-  const m = cleaned.match(/^(?:hey[\s,]+)?zee\b[\s,.:;-]*(.*)$/i);
-  if (!m) return { woke: false, cmd: "" };
-  return { woke: true, cmd: String(m[1] || "").trim() };
+  const norm = normalizeWakePhrase(cleaned);
+  if (!norm) return { woke: false, cmd: "" };
+  // Exact match against an accepted phrase, OR a phrase followed by extra
+  // words (e.g. "Z, are you there? what's the time") — capture the trailing command.
+  for (const phrase of WAKE_PHRASES) {
+    if (norm === phrase) return { woke: true, cmd: "" };
+    if (norm.startsWith(phrase) && norm.length > phrase.length + 1) {
+      // Reconstruct command from the original cleaned text by stripping the wake prefix tokens.
+      const lower = cleaned.toLowerCase();
+      const cmdMatch = lower.replace(
+        /^\s*z[\s,?.!]*(?:\s+are\s+you\s+there)?[\s,?.!]*/i,
+        ""
+      ).trim();
+      return { woke: true, cmd: cmdMatch || "" };
+    }
+  }
+  return { woke: false, cmd: "" };
 }
 
 function normalizeWakeCommand(cmd) {
@@ -263,7 +327,7 @@ async function wakeOnly() {
   });
   if (!awake) return;
   setVoiceStatus("Zee: awake — awaiting command");
-  if (voiceHeard) voiceHeard.textContent = "Heard: Zee (wake)";
+  if (voiceHeard) voiceHeard.textContent = "Heard: Z (wake)";
 }
 
 function startWakeWordLoop() {
@@ -277,10 +341,14 @@ function startWakeWordLoop() {
   wakeRecognizer = recog;
   setWakeLabelSleeping();
   setVoiceStatus("Zee: wake listener starting...");
-  if (voiceHeard) voiceHeard.textContent = "Heard: say 'Zee, ...'";
+  if (voiceHeard) voiceHeard.textContent = 'Heard: say "Z, are you there?"';
   recog.onstart = () => {
     setVoiceStatus("Zee: wake listener active");
-    if (wakeStatus) wakeStatus.textContent = wakeUnstable ? "Wake: unstable (direct listen mode)" : "Wake: ready (say 'Zee ...')";
+    if (wakeStatus) {
+      wakeStatus.textContent = wakeUnstable
+        ? "Wake: unstable (direct listen mode)"
+        : `Wake: ready (say "Z, are you there?")`;
+    }
   };
   recog.onresult = (event) => {
     for (let i = event.resultIndex; i < event.results.length; i++) {
@@ -373,13 +441,17 @@ async function toggleVoice() {
   if (LEGACY_ALWAYS_ON_VOICE) {
     try {
       if (isVoiceConnected()) {
+        clearPassiveWakeOffTimer();
+        passiveWakeSessionUntil = 0;
+        passiveWakeFollowupUntil = 0;
         stopWakeWordLoop();
         await disconnectZeeVoice();
         if (wakeStatus) wakeStatus.textContent = "Wake: off";
         setVoiceStatus("Zee: voice idle");
       } else {
+        clearPassiveWakeOffTimer();
         await connectZeeVoice();
-        if (wakeStatus) wakeStatus.textContent = "Wake: legacy on";
+        if (wakeStatus) wakeStatus.textContent = "Wake: budget session (5s)";
         setVoiceStatus("Zee: listening");
       }
     } catch (e) {
@@ -430,16 +502,175 @@ async function toggleVoice() {
   setVoiceArmedUi();
 }
 
+function clearPassiveWakeOffTimer() {
+  if (passiveWakeOffTimer) {
+    window.clearTimeout(passiveWakeOffTimer);
+    passiveWakeOffTimer = 0;
+  }
+}
+
+function schedulePassiveAutoOff() {
+  clearPassiveWakeOffTimer();
+  const ms = passiveWakeSessionUntil > 0 ? Math.max(0, passiveWakeSessionUntil - Date.now()) : PASSIVE_WAKE_SESSION_MS;
+  passiveWakeOffTimer = window.setTimeout(async () => {
+    if (isVoiceConnected()) {
+      try {
+        await disconnectZeeVoice();
+      } catch {
+        // watchdog will retry if needed
+      }
+    }
+    passiveWakeSessionUntil = 0;
+    setVoiceStatus("Zee: voice idle");
+    if (wakeStatus) wakeStatus.textContent = `Wake: ready (say "Z, are you there?")`;
+    setVoiceArmedUi();
+  }, ms);
+}
+
+function startPassiveWakeWatchdog() {
+  if (passiveWakeWatchdog) return;
+  passiveWakeWatchdog = window.setInterval(async () => {
+    const connected = isVoiceConnected();
+    const hasSession = passiveWakeSessionUntil > 0;
+    const expired = hasSession && Date.now() >= passiveWakeSessionUntil;
+    if (!connected) {
+      if (!hasSession) return;
+      passiveWakeSessionUntil = 0;
+      clearPassiveWakeOffTimer();
+      setVoiceArmedUi();
+      return;
+    }
+    if (!expired) return;
+    try {
+      await disconnectZeeVoice();
+    } catch {
+      // disconnectZeeVoice already handles internal cleanup
+    }
+    passiveWakeSessionUntil = 0;
+    clearPassiveWakeOffTimer();
+    setVoiceStatus("Zee: voice idle");
+    if (wakeStatus) wakeStatus.textContent = `Wake: ready (say "Z, are you there?")`;
+    setVoiceArmedUi();
+  }, 400);
+}
+
+async function activateFromPassiveWake(cmd) {
+  if (passiveWakeActivating) return;
+  // Never extend a live wake session from ambient noise.
+  if (isVoiceConnected()) return;
+  passiveWakeActivating = true;
+  try {
+    await connectZeeVoice();
+    setVoiceStatus("Zee: listening");
+    setVoiceArmedUi();
+    const normalized = normalizeWakeCommand(String(cmd || "").trim());
+    if (normalized) {
+      sendTextPrompt(normalized);
+      if (wakeStatus) wakeStatus.textContent = "Wake: command sent";
+    } else {
+      passiveWakeFollowupUntil = Date.now() + PASSIVE_WAKE_SESSION_MS;
+      if (wakeStatus) wakeStatus.textContent = "Wake: awaiting command (5s)";
+    }
+  } catch (e) {
+    setVoiceStatus(`Zee: ${String(e.message || e)}`);
+  } finally {
+    passiveWakeActivating = false;
+  }
+}
+
+function startPassiveWakeLoop() {
+  if (!PASSIVE_WAKE_ENABLED || !LEGACY_ALWAYS_ON_VOICE) return;
+  if (wakeEventSource) return;
+  if (wakeStatus) wakeStatus.textContent = "Wake: wake service connecting...";
+  const es = new EventSource("/api/zee/wake/events");
+  wakeEventSource = es;
+  es.onmessage = (ev) => {
+    let data = null;
+    try {
+      data = JSON.parse(String(ev.data || "{}"));
+    } catch {
+      return;
+    }
+    const t = String(data?.type || "");
+    if (t === "connected") {
+      if (wakeStatus) wakeStatus.textContent = "Wake: service connected";
+      return;
+    }
+    if (t === "ready") {
+      if (wakeStatus) wakeStatus.textContent = `Wake: ready (say "Z, are you there?")`;
+      setVoiceStatus("Zee: local wake service active");
+      return;
+    }
+    if (t === "wake") {
+      const spoken = String(data?.text || "z");
+      if (voiceHeard) voiceHeard.textContent = `Heard: ${spoken}`;
+      const parsed = parseWakeCommand(spoken);
+      if (!parsed.woke) return;
+      if (isVoiceConnected()) return;
+      // Honor user-requested cooldown ("That will be all, Zee") so casual
+      // mentions don't immediately re-bill an OpenAI Realtime session.
+      if (Date.now() < wakeCooldownUntil) {
+        const remain = Math.ceil((wakeCooldownUntil - Date.now()) / 1000);
+        if (wakeStatus) wakeStatus.textContent = `Wake: cooldown ${remain}s (heard "${spoken}")`;
+        return;
+      }
+      activateFromPassiveWake(parsed.cmd || "").catch(() => {});
+      return;
+    }
+    if (t === "end_session") {
+      // Local end-of-session phrase recognized by the wake service grammar
+      // ("that will be all", "good night", etc.). This works regardless of
+      // OpenAI Realtime transcription quirks ("Zee" vs "Z") and even when
+      // the data channel is mid-flight.
+      const spoken = String(data?.text || "");
+      if (voiceHeard) voiceHeard.textContent = `Heard: ${spoken}`;
+      if (isVoiceConnected()) {
+        endZeeVoiceSession("wake-end-phrase");
+      } else {
+        // Already off — still arm cooldown so a stray "good night Zee" right
+        // afterwards doesn't immediately wake her back up.
+        window.dispatchEvent(
+          new CustomEvent("zee:voice-end-session", { detail: { reason: "wake-end-phrase-idle" } })
+        );
+      }
+      return;
+    }
+    if (t === "error") {
+      if (wakeStatus) wakeStatus.textContent = "Wake: service error";
+      return;
+    }
+  };
+  es.onerror = () => {
+    if (wakeStatus) wakeStatus.textContent = "Wake: service reconnecting...";
+  };
+}
+
+function ensurePassiveWakeFromGesture() {
+  // no-op: wake is provided by server-side wake service
+}
+
 btnVoice?.addEventListener("click", () => toggleVoice());
+window.addEventListener("pointerdown", ensurePassiveWakeFromGesture, { passive: true });
+window.addEventListener("keydown", ensurePassiveWakeFromGesture);
 
 btnCompact?.addEventListener("click", () => {
   document.body.classList.toggle("zee-hud-mode");
 });
 
+// Track held modifier keys so we can distinguish right-side from left-side
+// (event.ctrlKey/altKey don't tell us which side).
+const heldKeys = new Set();
 window.addEventListener("keydown", (e) => {
-  if (e.altKey && (e.code === "KeyZ" || e.key === "z" || e.key === "Z")) {
+  heldKeys.add(e.code);
+  // Right Ctrl + Right Alt + Home -> hide/show whole HUD ("panic hide").
+  if (
+    e.code === "Home" &&
+    heldKeys.has("ControlRight") &&
+    heldKeys.has("AltRight")
+  ) {
     e.preventDefault();
     root?.classList.toggle("zee-off");
+    return;
   }
   if (e.altKey && (e.code === "KeyM" || e.key === "m")) {
     e.preventDefault();
@@ -454,6 +685,10 @@ window.addEventListener("keydown", (e) => {
     if (isVoiceConnected()) sendTextPrompt("Status check. Briefly summarize dashboard highlights.");
   }
 });
+window.addEventListener("keyup", (e) => {
+  heldKeys.delete(e.code);
+});
+window.addEventListener("blur", () => heldKeys.clear());
 
 window.zee = {
   registry,
@@ -464,3 +699,52 @@ window.zee = {
 
 drawMicLevel(0);
 setVoiceArmedUi();
+startPassiveWakeLoop();
+startPassiveWakeWatchdog();
+
+window.addEventListener("zee:voice-connected", () => {
+  passiveWakeSessionUntil = Date.now() + PASSIVE_WAKE_SESSION_MS;
+  schedulePassiveAutoOff();
+  if (wakeStatus) wakeStatus.textContent = "Wake: budget session (5s)";
+  setVoiceArmedUi();
+});
+
+window.addEventListener("zee:voice-disconnected", () => {
+  passiveWakeSessionUntil = 0;
+  clearPassiveWakeOffTimer();
+  setVoiceArmedUi();
+});
+
+window.addEventListener("zee:voice-end-session", (ev) => {
+  const reason = /** @type {CustomEvent<{reason?: string}>} */ (ev).detail?.reason || "explicit";
+  // Lock the button to "Voice off" immediately, before WebRTC teardown
+  // resolves, so the user gets instant visual confirmation.
+  passiveWakeSessionUntil = 0;
+  clearPassiveWakeOffTimer();
+  if (btnVoice) {
+    btnVoice.textContent = "Voice off";
+    btnVoice.setAttribute("aria-pressed", "false");
+  }
+  setVoiceStatus("Zee: voice off (no API usage)");
+  wakeCooldownUntil = Date.now() + WAKE_COOLDOWN_MS;
+  if (wakeStatus) wakeStatus.textContent = `Wake: cooldown ${WAKE_COOLDOWN_MS / 1000}s (${reason})`;
+  if (wakeCooldownTickTimer) window.clearInterval(wakeCooldownTickTimer);
+  wakeCooldownTickTimer = window.setInterval(() => {
+    const remain = wakeCooldownUntil - Date.now();
+    if (remain <= 0) {
+      window.clearInterval(wakeCooldownTickTimer);
+      wakeCooldownTickTimer = 0;
+      wakeCooldownUntil = 0;
+      if (wakeStatus) wakeStatus.textContent = `Wake: ready (say "Z, are you there?")`;
+      return;
+    }
+    if (wakeStatus) wakeStatus.textContent = `Wake: cooldown ${Math.ceil(remain / 1000)}s`;
+  }, 1000);
+});
+
+window.addEventListener("zee:voice-activity", () => {
+  if (!isVoiceConnected()) return;
+  passiveWakeSessionUntil = Date.now() + PASSIVE_WAKE_SESSION_MS;
+  schedulePassiveAutoOff();
+});
+

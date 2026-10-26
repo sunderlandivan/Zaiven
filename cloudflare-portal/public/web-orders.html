@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Web Orders — PreEminent Portal</title>
+    <link rel="icon" type="image/png" href="/brand/logo.png" />
+    <link rel="stylesheet" href="/inventory.css" />
+    <link rel="stylesheet" href="/cloud.css" />
+    <script src="/cloud.js" defer></script>
+  </head>
+  <body data-page="web-orders">
+    <div class="app-shell">
+      <aside class="nav-pane">
+        <div class="nav-brand">The PreEminent Store - Portal</div>
+        <nav class="nav-links" id="cloudNav" aria-label="Portal pages"></nav>
+      </aside>
+      <main class="nav-content">
+        <header class="content-header"><h1>Web Orders</h1></header>
+        <p class="help">Orders from preeminentstore.com. Ship Zelle and Venmo orders only after they're marked paid. Print a packing slip from each order.</p>
+        <p class="help" id="woPending"></p>
+        <section class="panel">
+          <div class="cloud-toolbar">
+            <input id="woSearch" type="search" placeholder="Search order #, buyer, item…" />
+            <select id="woStatus" aria-label="Show">
+              <option value="">All orders</option>
+              <option value="to_ship">To ship</option>
+              <option value="awaiting_payment">Awaiting payment</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+            <button id="woReload" type="button" class="subtle">Reload</button>
+          </div>
+          <p class="help" id="woStatusLine" role="status"></p>
+          <div class="wo-list" id="woList"></div>
+          <div class="pager" id="woPager"></div>
+        </section>
+      </main>
+    </div>
+    <script src="/web-orders.js" defer></script>
+  </body>
+</html>

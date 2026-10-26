@@ -1,0 +1,13 @@
+name = "preeminentstore"
+pages_build_output_dir = "../storefront"
+compatibility_date = "2026-09-01"
+
+[vars]
+PAYPAL_CLIENT_ID = "BAAz5zF2Hddt8att9vB6prSZHjR5s8KgfQeU71MKw_Ren0w_OzzbKpCul_GnmH4nCPDPIolEo-ywiXYNpA"
+PAYPAL_API = "https://api-m.paypal.com"
+
+# Private: exact stock + authoritative prices ("stock"), the public catalog ("catalog"),
+# open checkouts ("pending:<paypal id>") and paid orders waiting for the PC to pull them ("order:<paypal id>").
+[[kv_namespaces]]
+binding = "STORE"
+id = "f655ff3db54a4aafbd9d98902564dbe7"

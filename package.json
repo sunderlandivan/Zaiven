@@ -1,17 +1,28 @@
 {
   "name": "tcg-4p-high-card",
   "private": true,
-  "version": "0.1.0",
+  "version": "2.0.0",
   "type": "module",
   "scripts": {
     "dev": "node server/index.js",
-    "start": "node server/index.js"
+    "start": "node server/index.js",
+    "test:lease": "node --test server/portalLease.test.js",
+    "test:limited": "node --test server/limitedItems.test.js",
+    "test:catalog": "node --test server/storeCatalog.test.js",
+    "test:sold": "node --test server/soldLedger.test.js",
+    "build:audi-hero": "node scripts/build-audi-hero.mjs"
   },
   "dependencies": {
+    "@napi-rs/canvas": "^1.0.10",
     "axios": "^1.14.0",
     "express": "^4.19.2",
+    "ffmpeg-static": "^5.3.0",
     "nanoid": "^5.0.7",
+    "sharp": "^0.33.5",
     "socket.io": "^4.7.5",
     "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "wrangler": "^4.147.0"
   }
 }

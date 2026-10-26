@@ -1,0 +1,151 @@
+/* Cloud shell additions on top of the PC portal's inventory.css. */
+.cloud-hidden { display: none !important; }
+
+/* .nav-group lives in inventory.css. */
+.pc-badge {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 650;
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--line);
+  background: var(--sunken);
+  color: var(--subtle);
+}
+
+.cloud-user {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  display: grid;
+  gap: 6px;
+}
+.cloud-user-name { font-weight: 650; color: var(--text); overflow-wrap: anywhere; }
+.cloud-user-mail { color: var(--muted); overflow-wrap: anywhere; }
+.cloud-user form { margin: 0; }
+.cloud-logout { width: 100%; padding: 8px 10px; }
+.role-pill {
+  justify-self: start;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 650;
+  border: 1px solid var(--neutral-line);
+  background: var(--neutral-bg);
+  color: var(--neutral-text);
+}
+/* Scoped to the pill: cloud.js also puts role-<role> on <body>. */
+.role-pill.role-owner { background: var(--accent-soft); border-color: var(--accent-soft-line); color: var(--accent-text); }
+.role-pill.role-manager { background: var(--info-bg); border-color: var(--info-line); color: var(--info-text); }
+.role-pill.role-staff { background: var(--ok-bg); border-color: var(--ok-line); color: var(--ok-text); }
+
+.shadow-banner {
+  margin: 0 0 18px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--info-line);
+  background: var(--info-bg);
+  color: var(--text-2);
+  font-size: 13px;
+}
+.shadow-banner strong { color: var(--info-text); }
+.cloud-note { margin: -8px 0 6px; }
+.pc-note {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px dashed var(--line-strong);
+  background: var(--panel-2);
+  color: var(--muted);
+  font-size: 13px;
+}
+button.cloud-locked,
+input.cloud-locked,
+select.cloud-locked {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cloud-menu-btn { display: none; }
+
+/* Staff never receive cost/profit/fee numbers; drop the empty columns too. */
+.role-staff #stockTable th:nth-child(n + 8):nth-child(-n + 9),
+.role-staff #stockTable td:nth-child(n + 8):nth-child(-n + 9),
+.role-staff #stockTable th:nth-child(n + 12):nth-child(-n + 15),
+.role-staff #stockTable td:nth-child(n + 12):nth-child(-n + 15),
+.role-staff #stockKpis .card:nth-child(1),
+.role-staff #stockKpis .card:nth-child(3),
+.role-staff #stockKpis .card:nth-child(6),
+.role-staff #ordersTable th:nth-child(n + 7):nth-child(-n + 10),
+.role-staff #ordersTable td:nth-child(n + 7):nth-child(-n + 10) {
+  display: none;
+}
+
+/* Cloud-only pages */
+.cloud-toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+.cloud-toolbar input[type="search"] { flex: 2; min-width: 180px; }
+.cloud-toolbar select { min-width: 150px; flex: 1; }
+.pager { display: flex; gap: 8px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+.pager button { padding: 8px 12px; }
+.muted { color: var(--muted); }
+.err { color: var(--bad-text); }
+.num { text-align: right; font-variant-numeric: tabular-nums; }
+.scroll-x { overflow-x: auto; }
+.wo-list { display: grid; gap: 10px; }
+.wo-card { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); padding: 14px; display: grid; gap: 8px; box-shadow: var(--shadow-sm); }
+.wo-card.cancelled { opacity: 0.55; }
+.wo-head { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: baseline; }
+.wo-id { font-weight: 700; overflow-wrap: anywhere; }
+.wo-total { margin-left: auto; font-weight: 700; }
+.wo-lines { margin: 0; padding-left: 18px; font-size: 14px; }
+.wo-ship { font-size: 13px; color: var(--muted); }
+.wo-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.wo-actions a { text-decoration: none; }
+/* .badge (wait / paid / cancel / ship) lives in inventory.css. */
+.kv { display: grid; grid-template-columns: minmax(140px, max-content) 1fr; gap: 6px 14px; font-size: 13px; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; overflow-wrap: anywhere; }
+pre.json { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; background: var(--sunken); border: 1px solid var(--line); border-radius: 8px; padding: 10px; margin: 0; font-family: var(--mono); }
+.user-form { display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 8px; align-items: end; }
+.user-form label { display: grid; gap: 4px; font-size: 12px; color: var(--muted); }
+.user-form input, .user-form select { min-width: 0; width: 100%; }
+
+@media (max-width: 800px) {
+  .nav-pane { padding: 10px 12px; gap: 8px; }
+  .nav-brand { border-bottom: none; padding-bottom: 0; flex: 1; }
+  .cloud-menu-btn { display: inline-block; padding: 8px 14px; }
+  .nav-pane .nav-links,
+  .nav-pane .cloud-user { display: none; width: 100%; }
+  .nav-pane.nav-open .nav-links { display: flex; flex-direction: column; }
+  .nav-pane.nav-open .cloud-user { display: grid; }
+  .nav-group { width: 100%; }
+  .nav-content { padding: 12px 12px 32px; }
+  .panel { padding: 12px; }
+  .panel > h2 { margin: 0 0 10px; }
+  input, select { min-width: 0; }
+  .table-wrap { overflow-x: auto; }
+  .tax-prep-header { align-items: stretch; }
+  .user-form { grid-template-columns: 1fr; }
+  .wo-total { margin-left: 0; }
+}
+
+@media (max-width: 640px) {
+  /* Phone: keep what's needed to find and ship an order / item. */
+  #ordersTable th:nth-child(4), #ordersTable td:nth-child(4),
+  #ordersTable th:nth-child(6), #ordersTable td:nth-child(6),
+  #ordersTable th:nth-child(8), #ordersTable td:nth-child(8),
+  #ordersTable th:nth-child(9), #ordersTable td:nth-child(9),
+  #stockTable th:nth-child(2), #stockTable td:nth-child(2),
+  #stockTable th:nth-child(3), #stockTable td:nth-child(3),
+  #stockTable th:nth-child(5), #stockTable td:nth-child(5),
+  #stockTable th:nth-child(6), #stockTable td:nth-child(6),
+  #stockTable th:nth-child(12), #stockTable td:nth-child(12) {
+    display: none;
+  }
+  th, td { padding: 7px 6px; font-size: 12px; }
+  .content-header h1 { font-size: 1.15rem; margin-bottom: 10px; }
+  .orders-toolbar .orders-date-row label { white-space: normal; }
+}

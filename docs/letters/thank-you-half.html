@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Thank you letter - half page (2 per sheet)</title>
+<style>
+@page { size: 11in 8.5in; margin: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 11in; height: 8.5in; }
+body { font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif; color: #2a1d14; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.sheet { width: 11in; height: 8.5in; display: flex; }
+.card { width: 5.5in; height: 8.5in; display: flex; flex-direction: column; overflow: hidden; }
+.card + .card { border-left: 1px dashed #bbb; }
+
+.hero { height: 1.55in; background: radial-gradient(ellipse at 50% 70%, #5a1a05 0%, #1c0904 55%, #0d0503 100%); display: flex; align-items: center; justify-content: center; gap: 0.2in; border-bottom: 3px solid #e8892b; }
+.hero img { height: 1.3in; width: 1.3in; object-fit: cover; border-radius: 50%; box-shadow: 0 0 26px rgba(255,120,30,.45); }
+.brand { color: #f7ead6; font-family: Georgia, serif; text-transform: uppercase; line-height: 1.05; }
+.brand small { display: block; font-size: 9pt; letter-spacing: 4px; color: #f0a95a; }
+.brand strong { display: block; font-size: 23pt; letter-spacing: 2px; font-weight: 600; }
+.brand em { display: block; margin-top: 6px; font-style: normal; font-family: "Segoe UI", Arial, sans-serif; font-size: 7pt; letter-spacing: 2.5px; color: #e8b98a; }
+
+.body { flex: 1; padding: 0.25in 0.4in 0.1in; }
+.thanks { font-family: Georgia, serif; font-size: 18pt; color: #b84a10; margin-bottom: 0.06in; }
+.greeting { font-size: 10pt; margin-bottom: 0.08in; }
+.greeting .blank { display: inline-block; width: 2.4in;  }
+.body p { font-size: 9.8pt; line-height: 1.5; margin-bottom: 0.1in; }
+.sign { margin-top: 0.02in; font-size: 9pt; }
+.sign .name { font-family: "Segoe Script", "Brush Script MT", cursive; font-size: 14pt; color: #b84a10; margin-top: 0; }
+
+.extras { display: flex; gap: 0.2in; align-items: center; margin-top: 0.18in; padding: 0.12in 0.16in; border: 1.5px solid #f0c9a0; border-radius: 12px; background: #fff7ef; }
+.extras img { width: 0.9in; height: 0.9in; }
+.extras h3 { font-size: 11pt; color: #b84a10; margin-bottom: 3px; }
+.extras p { font-size: 8.5pt; line-height: 1.4; margin: 0; }
+.extras .url { font-weight: 700; font-size: 10.5pt; }
+
+.footer { height: 0.32in; background: #1c0904; color: #e8b98a; display: flex; align-items: center; justify-content: center; font-size: 7.5pt; letter-spacing: 1.5px; text-transform: uppercase; }
+.brand em.slogan { color: #ffb347; font-weight: 600; font-size: 8.5pt; letter-spacing: 2px; margin-top: 7px; }
+</style>
+</head>
+<body>
+<div class="sheet">
+  <template id="card">
+    <div class="card">
+      <div class="hero">
+        <img src="../../storefront/brand/phoenix.png" alt="">
+        <div class="brand"><small>The</small><strong>PreEminent<br>Store</strong><em class="slogan">Rise in Quality</em></div>
+      </div>
+      <div class="body">
+        <div class="thanks">Thank you!</div>
+        <div class="greeting">Dear <span class="blank"></span>,</div>
+        <p>We at The PreEminent Store want to extend our heartfelt gratitude for your continued support and trust in us. Your choice to shop with us means the world, and we are honored to serve you with quality products and exceptional service.</p>
+        <p>As a token of our appreciation, we've included a personal gift here for you. We promise to keep bringing you the very best in all your collectibles along with new and exciting offerings. Your satisfaction is our top priority, and every purchase you make inspires us to work harder and strive for excellence.</p>
+        <p>Thank you once again for being part of our journey. If there's ever anything we can do to improve your experience, please don't hesitate to let us know. We would appreciate your positive feedback; it is invaluable in helping us grow.</p>
+        <p>Looking forward to serving you again soon!</p>
+        <div class="sign">Warm regards,<div class="name">The PreEminent Store</div></div>
+        <div class="extras">
+          <img src="qr-website.svg" alt="QR code to preeminentstore.com">
+          <div>
+            <h3>Visit the official store</h3>
+            <p class="url">preeminentstore.com</p>
+            <p>Scan to see our newest sealed products and restocks.</p>
+            <p style="margin-top:4px">YouTube: <b>@thezaiven</b></p>
+          </div>
+        </div>
+      </div>
+      <div class="footer">PreEminent by Name. Quality by Nature. &nbsp;&middot;&nbsp; preeminentstore.com</div>
+    </div>
+  </template>
+</div>
+<script>
+  const t = document.getElementById("card");
+  const sheet = document.querySelector(".sheet");
+  sheet.append(t.content.cloneNode(true), t.content.cloneNode(true));
+</script>
+</body>
+</html>

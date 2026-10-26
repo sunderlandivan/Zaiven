@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <base href="/" />
+  <title>The PreEminent Store · Sealed TCG Products</title>
+  <meta name="description" content="Sealed Pokémon, Magic: The Gathering, Flesh and Blood, Weiss Schwarz, Riftbound, One Piece and Gundam products, plus singles. Ships within the US." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="icon" type="image/png" href="brand/favicon.png" />
+  <link rel="apple-touch-icon" href="brand/apple-touch-icon.png" />
+  <link rel="canonical" href="https://preeminentstore.com/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="The PreEminent Store" />
+  <meta property="og:title" content="The PreEminent Store · Sealed TCG Products" />
+  <meta property="og:description" content="Sealed Pokémon, Magic, Flesh and Blood, Weiss Schwarz and Riftbound. Booster boxes, ETBs and singles shipped fast within the US." />
+  <meta property="og:url" content="https://preeminentstore.com/" />
+  <meta property="og:image" content="https://preeminentstore.com/brand/logo.jpg" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="theme-color" content="#090506" />
+  <link rel="stylesheet" href="store.css?v=12" />
+</head>
+<body>
+  <div class="bg-orbs" aria-hidden="true"><span></span><span></span><span></span></div>
+  <div class="embers" id="embers" aria-hidden="true"></div>
+
+  <div class="promo-bar" id="promoBar" hidden></div>
+  <header class="topbar">
+    <a class="brand" href="#top">
+      <img class="brand-mark" src="brand/mark.png" alt="" />
+      <span class="brand-text">PreEminent<em>Store</em></span>
+    </a>
+    <nav class="top-nav">
+      <a href="#shop">Shop</a>
+      <a href="#games">Games</a>
+      <a href="#decks">Custom Decks</a>
+      <a href="info#faq">FAQ</a>
+      <a href="about">About</a>
+    </nav>
+    <label class="search">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.5 3a7.5 7.5 0 0 1 5.96 12.06l4.24 4.24-1.4 1.4-4.24-4.24A7.5 7.5 0 1 1 10.5 3Zm0 2a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11Z"/></svg>
+      <input id="search" type="search" placeholder="Search booster boxes, ETBs, sets…" autocomplete="off" />
+    </label>
+    <button class="cart-btn" id="cartBtn" aria-label="Open cart">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18a2 2 0 1 1 0 4 2 2 0 0 1 0-4Zm10 0a2 2 0 1 1 0 4 2 2 0 0 1 0-4ZM1 2h3.3l.9 2H21a1 1 0 0 1 .95 1.3l-3 9A1 1 0 0 1 18 15H7.4l-.9 2H19v2H5a1 1 0 0 1-.9-1.45L5.6 14.3 2.7 4H1V2Z"/></svg>
+      <span class="cart-count" id="cartCount">0</span>
+    </button>
+  </header>
+
+  <a class="rave-bar" id="raveBar" href="#reviews" hidden>
+    <span class="rave-head"><strong><span class="rave-word">Buyer feedback</span><span class="rave-tail"> from TCGplayer</span></strong></span>
+    <span class="rave-quote" id="raveQuote"></span>
+  </a>
+
+  <main id="top">
+    <section class="hero">
+      <div class="hero-copy">
+        <div class="hero-phoenix" aria-hidden="true"><img src="brand/phoenix.png" alt="" /></div>
+        <p class="eyebrow">Sealed product · Shipped fast · Authentic</p>
+        <h1>Rise with <span class="holo-text">legendary</span> pulls.</h1>
+        <p class="lede">Booster boxes, Elite Trainer Boxes, bundles and collector displays across Pokémon, Magic, Flesh and Blood, Weiss Schwarz and Riftbound.</p>
+        <div class="hero-cta">
+          <a class="btn btn-primary" href="#shop">Shop now</a>
+          <a class="btn btn-ghost" href="#shop" data-sort="new">New arrivals</a>
+        </div>
+        <div class="socials">
+          <a class="social yt" href="https://www.youtube.com/@thezaiven" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2 31 31 0 0 0 0 12a31 31 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1A31 31 0 0 0 24 12a31 31 0 0 0-.5-5.8ZM9.6 15.6V8.4l6.3 3.6-6.3 3.6Z"/></svg>
+            <span><strong>Watch us rip packs</strong><small>YouTube · @thezaiven</small></span>
+          </a>
+          <a class="social ig" href="https://www.instagram.com/thepreeminentstore/" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.2c3.2 0 3.6 0 4.8.1 3.3.1 4.8 1.7 4.9 4.9.1 1.3.1 1.6.1 4.8s0 3.6-.1 4.8c-.1 3.2-1.7 4.8-4.9 4.9-1.3.1-1.6.1-4.8.1s-3.6 0-4.8-.1c-3.3-.1-4.8-1.7-4.9-4.9C2.2 15.6 2.2 15.2 2.2 12s0-3.6.1-4.8C2.4 3.9 3.9 2.4 7.2 2.3 8.4 2.2 8.8 2.2 12 2.2ZM12 0C8.7 0 8.3 0 7.1.1 2.7.3.3 2.7.1 7.1 0 8.3 0 8.7 0 12s0 3.7.1 4.9c.2 4.4 2.6 6.8 7 7 1.2.1 1.6.1 4.9.1s3.7 0 4.9-.1c4.4-.2 6.8-2.6 7-7 .1-1.2.1-1.6.1-4.9s0-3.7-.1-4.9c-.2-4.4-2.6-6.8-7-7C15.7 0 15.3 0 12 0Zm0 5.8a6.2 6.2 0 1 0 0 12.4 6.2 6.2 0 0 0 0-12.4ZM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8Zm6.4-11.8a1.4 1.4 0 1 0 0 2.9 1.4 1.4 0 0 0 0-2.9Z"/></svg>
+            <span><strong>New drops &amp; deals</strong><small>Instagram · @thepreeminentstore</small></span>
+          </a>
+        </div>
+      </div>
+      <div class="hero-stack" id="heroStack" aria-hidden="true"></div>
+    </section>
+
+    <section class="marquee" aria-hidden="true"><div class="marquee-track" id="marquee"></div></section>
+
+    <section class="games" id="games">
+      <h2>Shop by game</h2>
+      <div class="game-tiles" id="gameTiles"></div>
+    </section>
+
+    <section class="shop" id="shop">
+      <div class="shop-head">
+        <h2>The Vault</h2>
+        <div class="controls">
+          <select id="typeFilter" aria-label="Product type"><option value="">All types</option></select>
+          <select id="sort" aria-label="Sort">
+            <option value="featured">Featured</option>
+            <option value="new">Newest</option>
+            <option value="price-asc">Price: low to high</option>
+            <option value="price-desc">Price: high to low</option>
+            <option value="name">Name A–Z</option>
+          </select>
+        </div>
+      </div>
+      <div class="chips" id="gameChips" role="tablist"></div>
+      <p class="result-note" id="resultNote"></p>
+      <div class="grid" id="grid"></div>
+    </section>
+
+    <section class="shop decks" id="decks" hidden>
+      <div class="shop-head">
+        <h2>Custom Decks</h2>
+      </div>
+      <p class="decks-lede">Built by us from cards opened in our own pack openings, so they're not factory sealed and aren't official publisher products. Every deck is put together by hand and ready to play out of the box, great for new players learning the game and veterans who want a fresh build. Most are one of a kind, so when they're gone, they're gone.</p>
+      <div class="chips" id="deckChips" role="tablist"></div>
+      <div class="grid" id="deckGrid"></div>
+    </section>
+
+    <section class="reviews" id="reviews" hidden>
+      <div class="shop-head">
+        <h2>What collectors say</h2>
+        <p class="reviews-score"><span id="reviewTotal"></span></p>
+      </div>
+      <div class="review-track-wrap"><div class="review-track" id="reviewTrack"></div></div>
+    </section>
+
+    <section class="videos" id="videos" hidden>
+      <div class="shop-head">
+        <h2>Watch us rip</h2>
+        <a class="btn btn-ghost" href="https://www.youtube.com/@thezaiven?sub_confirmation=1" target="_blank" rel="noopener">Subscribe on YouTube</a>
+      </div>
+      <div class="video-grid" id="videoGrid"></div>
+    </section>
+
+    <section class="perks">
+      <div><span class="perk-icon">◆</span><h3>Described honestly</h3><p>Sealed product ships factory sealed. Singles are listed with their condition. Custom decks are built by us from opened cards.</p></div>
+      <div><span class="perk-icon">⚡</span><h3>Simple shipping</h3><p>One flat rate per order: <span id="perkShip">$10.99</span> for sealed product, <span id="perkSingle">$1.49</span> for single cards.</p></div>
+      <div><span class="perk-icon">🛡</span><h3>Packed with care</h3><p>Boxes are double-boxed so corners arrive crisp.</p></div>
+      <div><span class="perk-icon">★</span><h3>Live stock</h3><p>Everything listed is in stock and ships from us. Inventory updates automatically.</p></div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="brand"><img class="brand-mark" src="brand/mark.png" alt="" /><span class="brand-text">PreEminent<em>Store</em></span></div>
+    <nav class="footer-links">
+      <a href="about">About</a>
+      <a href="info#shipping">Shipping</a>
+      <a href="info#returns">Returns</a>
+      <a href="info#privacy">Privacy</a>
+      <a href="info#faq">FAQ</a>
+      <a href="info#contact">Contact</a>
+      <a href="info#terms">Terms</a>
+    </nav>
+    <div class="footer-socials">
+      <a href="https://www.youtube.com/@thezaiven" target="_blank" rel="noopener" aria-label="YouTube">YouTube</a>
+      <a href="https://www.instagram.com/thepreeminentstore/" target="_blank" rel="noopener" aria-label="Instagram">Instagram</a>
+    </div>
+    <p>Ships within the United States &middot; <!--email_off--><a href="mailto:sales@preeminentstore.com">sales@preeminentstore.com</a><!--/email_off--></p>
+    <p class="fine">&copy; 2026 The PreEminent Store LLC</p>
+    <p class="fine">Pokémon, Magic: The Gathering, Flesh and Blood, Weiss Schwarz, Riftbound, One Piece Card Game and Gundam Card Game are trademarks of their respective owners. The PreEminent Store is an independent retailer and is not affiliated with, endorsed by or sponsored by them. <span id="updated"></span></p>
+  </footer>
+
+  <div class="scrim" id="scrim" hidden></div>
+
+  <aside class="drawer" id="cart" aria-label="Cart" hidden>
+    <div class="drawer-head">
+      <h2>Your cart</h2>
+      <button class="icon-btn" data-close aria-label="Close cart">✕</button>
+    </div>
+    <div class="cart-lines" id="cartLines"></div>
+    <div class="drawer-foot">
+      <div class="row sub"><span>Subtotal</span><span id="cartSubtotal">$0.00</span></div>
+      <div class="row sub"><span>Shipping</span><span id="cartShipping">–</span></div>
+      <div class="row sub"><span>Sales tax (CA)</span><span id="cartTax" class="tax-pending">Calculated at checkout</span></div>
+      <div class="row"><span>Total</span><strong id="cartTotal">$0.00</strong></div>
+      <p class="fine" id="shipNote">We ship within the US only.</p>
+      <button class="btn btn-primary btn-block" id="checkoutBtn">Checkout</button>
+      <div class="pay-badges"><span>Visa</span><span>Mastercard</span><span>Amex</span><span>Discover</span><span>PayPal</span><span>Venmo</span><span>Zelle</span></div>
+    </div>
+  </aside>
+
+  <div class="modal" id="productModal" role="dialog" aria-modal="true" hidden>
+    <button class="icon-btn modal-close" data-close aria-label="Close">✕</button>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+
+  <div class="modal checkout" id="checkoutModal" role="dialog" aria-modal="true" hidden>
+    <button class="icon-btn modal-close" data-close aria-label="Close">✕</button>
+    <div class="checkout-body">
+      <div class="checkout-form" id="checkoutPay">
+        <h3>Checkout</h3>
+        <div class="pay-option">
+          <h4 class="pay-head">PayPal / card / Venmo <span class="pay-tag">instant</span></h4>
+          <p class="fine">Pay with PayPal, Venmo, or a debit or credit card (no PayPal account needed). You'll enter your shipping address in the payment window. We ship within the US only. California addresses pay CA sales tax.</p>
+          <div id="paypalButtons" class="paypal-buttons"></div>
+        </div>
+        <div class="pay-option" id="manualPay" hidden>
+          <h4 class="pay-head">Or pay directly</h4>
+          <div class="manual-choices">
+            <button type="button" class="manual-btn venmo" data-manual="venmo" hidden>Pay with Venmo <small id="venmoHandleLabel"></small></button>
+            <button type="button" class="manual-btn zelle" data-manual="zelle" hidden>Pay with Zelle</button>
+          </div>
+          <p class="fine" id="manualNote"></p>
+          <form class="manual-form" id="manualForm" novalidate hidden>
+            <label>Full name<input name="name" autocomplete="name" required maxlength="100" /></label>
+            <label>Email<input name="email" type="email" autocomplete="email" required maxlength="200" /></label>
+            <label>Street address<input name="line1" autocomplete="address-line1" required maxlength="200" /></label>
+            <label>Apt, suite, etc. (optional)<input name="line2" autocomplete="address-line2" maxlength="200" /></label>
+            <div class="form-row">
+              <label>City<input name="city" autocomplete="address-level2" required maxlength="100" /></label>
+              <label>State<select name="state" id="manualState" autocomplete="address-level1" required></select></label>
+              <label>ZIP<input name="zip" autocomplete="postal-code" inputmode="numeric" required maxlength="10" /></label>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block" id="manualSubmit">Place order</button>
+          </form>
+        </div>
+        <p class="pay-status" id="payStatus" role="alert"></p>
+        <p class="fine">Card and PayPal payments are processed securely by PayPal; we never see or store your card number. All sales are final; damaged or wrong items must be reported within 3 days of delivery.</p>
+      </div>
+      <aside class="checkout-summary">
+        <h4>Order summary</h4>
+        <div id="checkoutLines"></div>
+        <div class="row sub"><span>Subtotal</span><span id="coSubtotal"></span></div>
+        <div class="row sub"><span>Shipping</span><span id="coShipping"></span></div>
+        <div class="row sub"><span id="coTaxLabel">Sales tax (CA)</span><span id="coTax" class="tax-pending">Calculated at checkout</span></div>
+        <div class="row total"><span>Total</span><strong id="coTotal"></strong></div>
+      </aside>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" hidden></div>
+
+  <script src="store.js?v=20"></script>
+</body>
+</html>

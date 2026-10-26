@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Tax Prep — TCG Inventory</title>
+    <link rel="icon" type="image/png" href="/brand/logo.png" />
+    <link rel="stylesheet" href="/inventory.css" />
+    <script src="/portal-ui.js"></script>
+  </head>
+  <body data-page="tax-prep">
+    <div class="app-shell">
+      <aside class="nav-pane">
+        <div class="nav-brand">The PreEminent Store - Portal</div>
+        <nav class="nav-links">
+          <div class="nav-group">Daily</div>
+          <a class="nav-link" href="/inventory-orders.html">Order Tracking</a>
+          <a class="nav-link" href="/inventory-stock.html">Inventory</a>
+          <div class="nav-group">Business</div>
+          <a class="nav-link" href="/inventory-sheet-sync.html">Sheet Sync</a>
+          <a class="nav-link" href="/inventory-analytics.html">Selling Analytics</a>
+          <a class="nav-link" href="/inventory-dashboard-analytics.html">Dashboard Analytics</a>
+          <a class="nav-link" href="/inventory-marketing.html">Marketing</a>
+          <a class="nav-link" href="/inventory-import.html">Import and Pricing</a>
+          <a class="nav-link" href="/inventory-treasure-hunt.html">Treasure Hunt</a>
+          <div class="nav-group">Owner</div>
+          <a class="nav-link active" href="/inventory-tax-prep.html">Tax Prep</a>
+          <a class="nav-link" href="/inventory-loan.html">Loan</a>
+        </nav>
+      </aside>
+      <main class="nav-content">
+        <header class="content-header tax-prep-header">
+          <div class="page-heading">
+            <h1>Tax Prep</h1>
+            <p class="page-subtitle">Year-end inventory, purchases, sales and expenses for the tax return.</p>
+          </div>
+          <div class="row tax-prep-toolbar">
+            <label class="tax-year-label">
+              Tax year
+              <select id="taxYearSelect"></select>
+            </label>
+            <button id="taxReloadBtn" type="button" class="subtle">Reload</button>
+            <button id="taxExportAllBtn" type="button">Export spreadsheet (CSV)</button>
+          </div>
+        </header>
+
+        <p class="help">
+          Year-end workbook: beginning inventory, purchases, sales, ending inventory, and deductible expenses.
+          <strong>2025</strong> and <strong>2026</strong> purchases/sales come from your inventory &amp; sold sheet imports
+          (Magic, Pokemon, Flesh and Blood, Weiss Schwarz, Riftbound). Other years still use Order Tracking for sales when no
+          sheet import exists. Edit any table and click <strong>Save section</strong>.
+        </p>
+
+        <section class="panel">
+          <h2>Summary</h2>
+          <div id="taxSummaryKpis" class="dashboard-kpi-grid"></div>
+          <p id="taxCogsNote" class="help totals-explainer"></p>
+        </section>
+
+        <section class="panel tax-section" data-section="priorInventory">
+          <div class="tax-section-head">
+            <h2>Beginning inventory (prior year end)</h2>
+            <div class="row">
+              <button type="button" class="subtle tax-snapshot-btn" data-target="prior">Snapshot current inventory</button>
+              <button type="button" class="subtle tax-add-row-btn">Add row</button>
+              <button type="button" class="tax-save-section-btn">Save section</button>
+              <button type="button" class="subtle tax-export-section-btn">Export CSV</button>
+            </div>
+          </div>
+          <p class="help">What you had on hand at the start of the tax year (Dec 31 prior year). Uses saved ending inventory from the prior year when available.</p>
+          <div class="table-wrap tax-table-wrap">
+            <table class="tax-sheet" id="tablePriorInventory">
+              <thead>
+                <tr>
+                  <th>Description</th>
+                  <th>Qty</th>
+                  <th>Unit cost</th>
+                  <th>Total cost</th>
+                  <th>Notes</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+              <tfoot>
+                <tr><td colspan="3">Section total</td><td id="totalPriorInventory" class="num">—</td><td colspan="2"></td></tr>
+              </tfoot>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel tax-section" data-section="purchases">
+          <div class="tax-section-head">
+            <h2>Purchases this year (inventory bought)</h2>
+            <div class="row">
+              <button type="button" class="subtle tax-add-row-btn">Add row</button>
+              <button type="button" class="tax-save-section-btn">Save section</button>
+              <button type="button" class="subtle tax-export-section-btn">Export CSV</button>
+            </div>
+          </div>
+          <p class="help">Product you bought to resell during the tax year — item, qty, and cost basis per line.</p>
+          <div class="table-wrap tax-table-wrap">
+            <table class="tax-sheet" id="tablePurchases">
+              <thead>
+                <tr>
+                  <th>Description</th>
+                  <th>Qty</th>
+                  <th>Unit cost</th>
+                  <th>Total cost</th>
+                  <th>Notes</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+              <tfoot>
+                <tr><td colspan="3">Section total</td><td id="totalPurchases" class="num">—</td><td colspan="2"></td></tr>
+              </tfoot>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel tax-section" data-section="sales">
+          <div class="tax-section-head">
+            <h2>Sales this year</h2>
+            <div class="row">
+              <button type="button" class="subtle tax-export-section-btn">Export CSV</button>
+            </div>
+          </div>
+          <p class="help">From Order Tracking for the selected year: sale amount, marketplace fees, shipping you paid, and gross vs net.</p>
+          <div class="table-wrap tax-table-wrap">
+            <table class="tax-sheet" id="tableSales">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Order #</th>
+                  <th>Description</th>
+                  <th>Buyer</th>
+                  <th>Platform</th>
+                  <th>Qty</th>
+                  <th>Sale</th>
+                  <th>Fees paid</th>
+                  <th>Shipping</th>
+                  <th>Gross</th>
+                  <th>Net proceeds</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="6">Section totals</td>
+                  <td id="totalSalesSale" class="num">—</td>
+                  <td id="totalSalesFees" class="num">—</td>
+                  <td id="totalSalesShip" class="num">—</td>
+                  <td id="totalSalesGross" class="num">—</td>
+                  <td id="totalSalesNet" class="num">—</td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel tax-section" data-section="endingInventory">
+          <div class="tax-section-head">
+            <h2>Ending inventory (year end)</h2>
+            <div class="row">
+              <button type="button" class="subtle tax-snapshot-btn" data-target="ending">Snapshot current inventory</button>
+              <button type="button" class="subtle tax-add-row-btn">Add row</button>
+              <button type="button" class="tax-save-section-btn">Save section</button>
+              <button type="button" class="subtle tax-export-section-btn">Export CSV</button>
+            </div>
+          </div>
+          <p class="help">Inventory still on hand at Dec 31 — defaults to your latest import until you save a year-end snapshot.</p>
+          <div class="table-wrap tax-table-wrap">
+            <table class="tax-sheet" id="tableEndingInventory">
+              <thead>
+                <tr>
+                  <th>Description</th>
+                  <th>Qty</th>
+                  <th>Unit cost</th>
+                  <th>Total cost</th>
+                  <th>Notes</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+              <tfoot>
+                <tr><td colspan="3">Section total</td><td id="totalEndingInventory" class="num">—</td><td colspan="2"></td></tr>
+              </tfoot>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel tax-section" data-section="expenses">
+          <div class="tax-section-head">
+            <h2>Business expenses (write-offs)</h2>
+            <div class="row">
+              <button type="button" class="subtle tax-add-expense-btn">Add expense</button>
+              <button type="button" class="tax-save-section-btn">Save section</button>
+              <button type="button" class="subtle tax-export-section-btn">Export CSV</button>
+            </div>
+          </div>
+          <p class="help">Subscriptions, marketplace tools, office supplies, insurance, and other ordinary business costs.</p>
+          <div class="table-wrap tax-table-wrap">
+            <table class="tax-sheet" id="tableExpenses">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Category</th>
+                  <th>Vendor</th>
+                  <th>Description</th>
+                  <th>Amount</th>
+                  <th>Notes</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+              <tfoot>
+                <tr><td colspan="4">Section total</td><td id="totalExpenses" class="num">—</td><td colspan="2"></td></tr>
+              </tfoot>
+            </table>
+          </div>
+        </section>
+
+        <p id="taxPrepStatus" class="status"></p>
+      </main>
+    </div>
+    <script type="module" src="/inventory-nav.js"></script>
+    <script src="/inventory-tax-prep.js" defer></script>
+  </body>
+</html>

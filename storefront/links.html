@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <base href="/" />
+  <title>The PreEminent Store · Links</title>
+  <meta name="description" content="Shop sealed Pokémon, Magic, Flesh and Blood and more, and watch our pack openings on YouTube." />
+  <link rel="canonical" href="https://preeminentstore.com/links" />
+  <meta property="og:title" content="The PreEminent Store" />
+  <meta property="og:description" content="Sealed TCG products, singles and pack openings." />
+  <meta property="og:image" content="https://preeminentstore.com/brand/logo.jpg" />
+  <meta property="og:url" content="https://preeminentstore.com/links" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="icon" type="image/png" href="brand/favicon.png" />
+  <link rel="stylesheet" href="store.css?v=10" />
+  <style>
+    .links-page { max-width: 520px; margin: 0 auto; padding: 48px 20px 64px; display: flex; flex-direction: column; gap: 14px; text-align: center; }
+    .links-page .logo { width: 104px; height: 104px; margin: 0 auto; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent); }
+    .links-page h1 { font-family: "Cinzel", serif; font-size: 26px; margin: 6px 0 0; }
+    .links-page > p { margin: 0 0 8px; color: var(--muted); }
+    .link-btn { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 16px 18px; border-radius: 16px; border: 1px solid var(--line); background: rgba(255,255,255,.05); color: var(--text); text-decoration: none; font-weight: 600; transition: transform .15s ease, border-color .15s ease; }
+    .link-btn:hover { transform: translateY(-2px); border-color: var(--accent); }
+    .link-btn.primary { background: linear-gradient(135deg, #ff6a1a, #ff3d3d); border: 0; }
+    .link-btn small { font-weight: 400; color: var(--muted); }
+    .links-page h2 { font-size: 15px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 18px 0 2px; }
+    .drops { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .drop { display: flex; flex-direction: column; gap: 6px; padding: 10px; border-radius: 14px; border: 1px solid var(--line); background: rgba(255,255,255,.04); color: var(--text); text-decoration: none; font-size: 13px; text-align: left; }
+    .drop img { width: 100%; aspect-ratio: 1; object-fit: contain; border-radius: 10px; background: rgba(255,255,255,.04); }
+    .drop b { color: var(--gold); }
+    .games-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+    .games-row a { padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); color: var(--text); text-decoration: none; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="bg-orbs" aria-hidden="true"><span></span><span></span><span></span></div>
+  <main class="links-page">
+    <img class="logo" src="brand/logo.jpg" alt="The PreEminent Store" />
+    <h1>The PreEminent Store</h1>
+    <p>Sealed TCG products &amp; singles · Ships fast within the US</p>
+
+    <a class="link-btn primary" href="/?ref=ig-bio">Shop the store</a>
+    <a class="link-btn" href="/?ref=ig-bio&amp;sort=new">New arrivals</a>
+    <a class="link-btn" id="latestVideo" href="https://www.youtube.com/@thezaiven" target="_blank" rel="noopener">Watch us rip packs on YouTube <small>@thezaiven</small></a>
+
+    <h2>Newest drops</h2>
+    <div class="drops" id="drops"></div>
+
+    <h2>Shop by game</h2>
+    <div class="games-row">
+      <a href="/?ref=ig-bio&amp;game=pokemon">Pokémon</a>
+      <a href="/?ref=ig-bio&amp;game=magic">Magic</a>
+      <a href="/?ref=ig-bio&amp;game=fab">Flesh and Blood</a>
+      <a href="/?ref=ig-bio&amp;game=weiss">Weiss Schwarz</a>
+      <a href="/?ref=ig-bio&amp;game=riftbound">Riftbound</a>
+    </div>
+
+    <h2>More</h2>
+    <a class="link-btn" href="https://www.instagram.com/thepreeminentstore/" target="_blank" rel="noopener">Instagram <small>@thepreeminentstore</small></a>
+    <a class="link-btn" href="info#faq">Shipping, returns &amp; FAQ</a>
+    <a class="link-btn" href="about">About us</a>
+    <!--email_off--><a class="link-btn" href="mailto:sales@preeminentstore.com">Email us <small>sales@preeminentstore.com</small></a><!--/email_off-->
+
+    <nav class="footer-links">
+      <a href="about">About</a>
+      <a href="info#shipping">Shipping</a>
+      <a href="info#returns">Returns</a>
+      <a href="info#privacy">Privacy</a>
+      <a href="info#faq">FAQ</a>
+      <a href="info#contact">Contact</a>
+    </nav>
+    <p class="fine">&copy; 2026 The PreEminent Store LLC</p>
+  </main>
+  <script>
+    const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+    fetch("api/catalog")
+      .then((r) => r.json())
+      .then(({ items = [] }) => {
+        const newest = items.filter((i) => i.image && i.addedRow && !/case/i.test(i.name)).sort((a, b) => b.addedRow - a.addedRow).slice(0, 4);
+        document.getElementById("drops").innerHTML = newest
+          .map((i) => `<a class="drop" href="/p/${encodeURIComponent(i.id)}?ref=ig-bio"><img src="${esc(i.image)}" alt="" loading="lazy"><span>${esc(i.name)}</span><b>$${Number(i.price).toFixed(2)}</b></a>`)
+          .join("");
+      })
+      .catch(() => {});
+    fetch("api/youtube")
+      .then((r) => r.json())
+      .then(({ videos = [] }) => {
+        const v = videos.find((x) => !x.short) || videos[0];
+        if (!v) return;
+        const a = document.getElementById("latestVideo");
+        a.href = `https://www.youtube.com/watch?v=${v.id}`;
+        a.innerHTML = `Latest video: ${esc(v.title)} <small>YouTube</small>`;
+      })
+      .catch(() => {});
+  </script>
+</body>
+</html>

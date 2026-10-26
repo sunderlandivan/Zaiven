@@ -3,33 +3,62 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Import &amp; pricing — TCG Inventory</title>
+    <meta name="color-scheme" content="light dark" />
+    <title>Import and Pricing — TCG Inventory</title>
+    <link rel="icon" type="image/png" href="/brand/logo.png" />
     <link rel="stylesheet" href="/inventory.css" />
+    <script src="/portal-ui.js"></script>
   </head>
   <body data-page="import">
     <div class="app-shell">
       <aside class="nav-pane">
-        <div class="nav-brand">TCG Inventory</div>
+        <div class="nav-brand">The PreEminent Store - Portal</div>
         <nav class="nav-links">
-          <a class="nav-link active" href="/inventory-import.html">Import &amp; pricing</a>
-          <a class="nav-link" href="/inventory-analytics.html">Sell &amp; analytics</a>
-          <a class="nav-link" href="/inventory-orders.html">Order tracking</a>
+          <div class="nav-group">Daily</div>
+          <a class="nav-link" href="/inventory-orders.html">Order Tracking</a>
+          <a class="nav-link" href="/inventory-stock.html">Inventory</a>
+          <div class="nav-group">Business</div>
+          <a class="nav-link" href="/inventory-sheet-sync.html">Sheet Sync</a>
+          <a class="nav-link" href="/inventory-analytics.html">Selling Analytics</a>
+          <a class="nav-link" href="/inventory-dashboard-analytics.html">Dashboard Analytics</a>
+          <a class="nav-link" href="/inventory-marketing.html">Marketing</a>
+          <a class="nav-link active" href="/inventory-import.html">Import and Pricing</a>
+          <a class="nav-link" href="/inventory-treasure-hunt.html">Treasure Hunt</a>
+          <div class="nav-group">Owner</div>
+          <a class="nav-link" href="/inventory-tax-prep.html">Tax Prep</a>
+          <a class="nav-link" href="/inventory-loan.html">Loan</a>
         </nav>
-        <a class="nav-footer-link" href="/">← Game prototype</a>
       </aside>
       <main class="nav-content">
         <header class="content-header">
-          <h1>Import &amp; pricing</h1>
+          <div class="page-heading">
+            <h1>Import and Pricing</h1>
+            <p class="page-subtitle">Load your inventory spreadsheet and refresh market prices.</p>
+          </div>
         </header>
 
         <section class="panel">
           <h2>Import inventory</h2>
-          <div class="row">
-            <input id="filePath" type="text" placeholder="C:\Users\you\Downloads\Poke Inventory.xlsx" />
-            <button id="importBtn">Import Excel</button>
+          <div class="row import-file-row">
+            <label class="import-file-picker" for="inventoryFile">
+              Choose Excel file
+              <input
+                id="inventoryFile"
+                type="file"
+                accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+              />
+            </label>
+            <span id="inventoryFileName" class="import-file-name">No file selected</span>
+            <button id="importBtn" type="button" disabled>Import Excel</button>
           </div>
           <p class="help">
-            Each spreadsheet row becomes one inventory line (same product name on multiple rows stays separate). Re-importing replaces the list; item ids use the row position (<code>row_0</code>, <code>row_1</code>, …).
+            Pick your PreEminent export from your computer, then click <strong>Import Excel</strong>. Each spreadsheet row
+            becomes one inventory line (same product name on multiple rows stays separate), including
+            <strong>quantity 0</strong> so out-of-stock lines match your file. If the workbook contains a sheet named
+            <strong>FULL</strong> (any casing), only that sheet is imported; otherwise the <strong>first</strong> sheet is
+            used. Expected columns include <strong>Item ID</strong>, <strong>Qty</strong>, <strong>Cost w/ Tax</strong>,
+            and optional <strong>TCG Link</strong>. Re-importing replaces the list. Selling Analytics only lists rows with
+            <strong>quantity ≥ 1</strong>.
           </p>
         </section>
 
@@ -58,6 +87,7 @@
         <p id="status" class="status"></p>
       </main>
     </div>
+    <script type="module" src="/inventory-nav.js"></script>
     <script type="module" src="/inventory.js"></script>
   </body>
 </html>

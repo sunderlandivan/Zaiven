@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Users &amp; Audit — PreEminent Portal</title>
+    <link rel="icon" type="image/png" href="/brand/logo.png" />
+    <link rel="stylesheet" href="/inventory.css" />
+    <link rel="stylesheet" href="/cloud.css" />
+    <script src="/cloud.js" defer></script>
+  </head>
+  <body data-page="users">
+    <div class="app-shell">
+      <aside class="nav-pane">
+        <div class="nav-brand">The PreEminent Store - Portal</div>
+        <nav class="nav-links" id="cloudNav" aria-label="Portal pages"></nav>
+      </aside>
+      <main class="nav-content">
+        <header class="content-header"><h1>Users &amp; Audit</h1></header>
+        <section class="panel">
+          <h2>Who can sign in</h2>
+          <p class="help">
+            Only the Google accounts listed here can open the portal. <strong>Viewers</strong> see exactly what staff see but can't change
+            anything (the server refuses every change from a viewer account). <strong>Staff</strong> see web orders, order tracking (packing and shipping)
+            and stock quantities, but no costs, profit, totals, tax, payouts, settings or payment details. <strong>Managers</strong> also see
+            prices, costs and profit, Sold 2026, Sheet Sync, analytics and marketing, but not tax prep, loan, store settings, users or PayPal details.
+            Removing someone or changing their role signs them out on their next click.
+          </p>
+          <div class="table-wrap scroll-x"><table class="tax-sheet" id="usersTable"></table></div>
+        </section>
+        <section class="panel">
+          <h2>Add or change an employee</h2>
+          <form id="userForm" class="user-form">
+            <label>Google account email<input name="email" type="email" required autocomplete="off" placeholder="name@gmail.com" /></label>
+            <label>Name<input name="name" type="text" maxlength="80" placeholder="Optional" /></label>
+            <label>Role<select name="role"><option value="viewer">Viewer (read-only)</option><option value="staff" selected>Staff</option><option value="manager">Manager</option></select></label>
+            <button type="submit">Save</button>
+          </form>
+          <p class="help" id="userOut" role="status"></p>
+          <p class="help">They sign in at portal.preeminentstore.com with that Google account. If Google says the app is in testing, add their email as a test user on the OAuth consent screen in Google Cloud.</p>
+        </section>
+        <section class="panel">
+          <h2>Signed-in sessions</h2>
+          <p class="help" id="sessionsHelp">Sessions end after 12 hours, or sooner when idle.</p>
+          <div class="cloud-toolbar">
+            <button id="sessionsReload" type="button" class="subtle">Reload</button>
+            <button id="signOutAll" type="button">Sign out everyone</button>
+          </div>
+          <div class="table-wrap scroll-x"><table class="tax-sheet" id="sessionsTable"></table></div>
+          <p class="help" id="sessionsOut" role="status"></p>
+        </section>
+        <section class="panel">
+          <h2>Audit log</h2>
+          <div class="cloud-toolbar">
+            <input id="auditSearch" type="search" placeholder="Filter by email, action…" />
+            <button id="auditReload" type="button" class="subtle">Reload</button>
+          </div>
+          <div class="table-wrap scroll-x"><table class="tax-sheet" id="auditTable"></table></div>
+          <div class="pager" id="auditPager"></div>
+        </section>
+      </main>
+    </div>
+    <script src="/users.js" defer></script>
+  </body>
+</html>

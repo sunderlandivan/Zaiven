@@ -3,27 +3,43 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sell &amp; analytics — TCG Inventory</title>
+    <meta name="color-scheme" content="light dark" />
+    <title>Selling Analytics — TCG Inventory</title>
+    <link rel="icon" type="image/png" href="/brand/logo.png" />
     <link rel="stylesheet" href="/inventory.css" />
+    <script src="/portal-ui.js"></script>
   </head>
   <body data-page="analytics">
     <div class="app-shell">
       <aside class="nav-pane">
-        <div class="nav-brand">TCG Inventory</div>
+        <div class="nav-brand">The PreEminent Store - Portal</div>
         <nav class="nav-links">
-          <a class="nav-link" href="/inventory-import.html">Import &amp; pricing</a>
-          <a class="nav-link active" href="/inventory-analytics.html">Sell &amp; analytics</a>
-          <a class="nav-link" href="/inventory-orders.html">Order tracking</a>
+          <div class="nav-group">Daily</div>
+          <a class="nav-link" href="/inventory-orders.html">Order Tracking</a>
+          <a class="nav-link" href="/inventory-stock.html">Inventory</a>
+          <div class="nav-group">Business</div>
+          <a class="nav-link" href="/inventory-sheet-sync.html">Sheet Sync</a>
+          <a class="nav-link active" href="/inventory-analytics.html">Selling Analytics</a>
+          <a class="nav-link" href="/inventory-dashboard-analytics.html">Dashboard Analytics</a>
+          <a class="nav-link" href="/inventory-marketing.html">Marketing</a>
+          <a class="nav-link" href="/inventory-import.html">Import and Pricing</a>
+          <a class="nav-link" href="/inventory-treasure-hunt.html">Treasure Hunt</a>
+          <div class="nav-group">Owner</div>
+          <a class="nav-link" href="/inventory-tax-prep.html">Tax Prep</a>
+          <a class="nav-link" href="/inventory-loan.html">Loan</a>
         </nav>
-        <a class="nav-footer-link" href="/">← Game prototype</a>
       </aside>
       <main class="nav-content">
         <header class="content-header">
-          <h1>Sell &amp; analytics</h1>
+          <div class="page-heading">
+            <h1>Selling Analytics</h1>
+            <p class="page-subtitle">Which items to sell now, where to sell them, and which ones are losing money.</p>
+          </div>
         </header>
 
         <section class="panel">
           <h2>Financial snapshot</h2>
+          <p class="help">Product tables below omit quantity 0 lines; your spreadsheet import still stores them.</p>
           <div id="totals"></div>
         </section>
 
@@ -70,8 +86,6 @@
                     <th>Profit / unit</th>
                     <th>Total profit</th>
                     <th>Confidence</th>
-                    <th>Status</th>
-                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody></tbody>
@@ -150,6 +164,7 @@
         <p id="status" class="status"></p>
       </main>
     </div>
+    <script type="module" src="/inventory-nav.js"></script>
     <script type="module" src="/inventory.js"></script>
   </body>
 </html>

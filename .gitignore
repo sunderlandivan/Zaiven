@@ -1,8 +1,46 @@
-node_modules
+# Dependencies
+node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.env
-.DS_Store
-data/*.json
 
+# Secrets & local env (never commit)
+.env
+.env.*
+!.env.example
+**/*credentials*.json
+**/*secret*
+**/oauth*.json
+**/agent-token.json
+seniormind/.env.local
+server/data/zee-smartthings-oauth.json
+
+# Local ops DBs / tokens (copy separately via OneDrive — not for git)
+data/*.json
+data/backups/
+data/business-docs/
+data/distributor-kit/
+data/*.log
+data/*.csv
+server/data/*.json
+
+# Build / cache / scratch
+.DS_Store
+Thumbs.db
+out/
+dist/
+tmp-*.html
+temp_*
+*.log
+
+# Unreal / game prototypes (huge; keep local or separate repo)
+pirate-warships-ue/
+pirate-warships-ue-bp/
+pirate-warships-web/Saved/
+pirate-warships-web/Binaries/
+pirate-warships-web/Intermediate/
+pirate-warships-web/DerivedDataCache/
+
+# Cloudflare / wrangler local
+.wrangler/
+.dev.vars

@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Marketing — TCG Inventory</title>
+    <link rel="icon" type="image/png" href="/brand/logo.png" />
+    <link rel="stylesheet" href="/inventory.css" />
+    <script src="/portal-ui.js"></script>
+  </head>
+  <body data-page="marketing">
+    <div class="app-shell">
+      <aside class="nav-pane">
+        <div class="nav-brand">The PreEminent Store - Portal</div>
+        <nav class="nav-links">
+          <div class="nav-group">Daily</div>
+          <a class="nav-link" href="/inventory-orders.html">Order Tracking</a>
+          <a class="nav-link" href="/inventory-stock.html">Inventory</a>
+          <div class="nav-group">Business</div>
+          <a class="nav-link" href="/inventory-sheet-sync.html">Sheet Sync</a>
+          <a class="nav-link" href="/inventory-analytics.html">Selling Analytics</a>
+          <a class="nav-link" href="/inventory-dashboard-analytics.html">Dashboard Analytics</a>
+          <a class="nav-link active" href="/inventory-marketing.html">Marketing</a>
+          <a class="nav-link" href="/inventory-import.html">Import and Pricing</a>
+          <a class="nav-link" href="/inventory-treasure-hunt.html">Treasure Hunt</a>
+          <div class="nav-group">Owner</div>
+          <a class="nav-link" href="/inventory-tax-prep.html">Tax Prep</a>
+          <a class="nav-link" href="/inventory-loan.html">Loan</a>
+        </nav>
+      </aside>
+      <main class="nav-content">
+        <header class="content-header">
+          <div class="page-heading">
+            <h1>Marketing</h1>
+            <p class="page-subtitle">Review drafted social posts, make promo videos, and handle website orders.</p>
+          </div>
+          <div class="row">
+            <button id="mkSync" type="button">Check for new drafts</button>
+            <a class="subtle" href="https://preeminentstore.com/links" target="_blank" rel="noopener"><button type="button" class="subtle">Open Links page</button></a>
+            <span class="help" id="mkStatus"></span>
+          </div>
+        </header>
+        <p class="help">
+          Your marketing agent drafts posts and ideas every day. Edit anything, then Approve or Reject; approvals and rejections teach it what you like.
+          After you post something, mark it Posted. The agent is told never to reveal exact stock or suggest prices below your 10% profit floor.
+        </p>
+
+        <section class="panel">
+          <h2>Drafts</h2>
+          <div class="mk-tabs" id="mkTabs">
+            <button data-filter="new" class="active">To review</button>
+            <button data-filter="approved">Approved</button>
+            <button data-filter="posted">Posted</button>
+            <button data-filter="rejected">Rejected</button>
+            <button data-filter="all">All</button>
+          </div>
+          <div class="mk-list" id="mkList"></div>
+        </section>
+
+        <section class="panel">
+          <h2>Promo Shorts</h2>
+          <p class="help">
+            Makes a 12-second animated vertical video (YouTube Shorts / Instagram Reels): a joke opener, the product slamming in, a price stamp,
+            a funny sticker, and the store link, with sound effects built in. Leave the joke and sticker blank for a random one, or write your own
+            (use a new line for the punchline). Add a trending song in the YouTube or Instagram app when you upload.
+          </p>
+          <div class="row">
+            <input id="psSearch" class="ps-search" list="psProducts" placeholder="Type a product name…" />
+            <datalist id="psProducts"></datalist>
+          </div>
+          <div class="row ps-row">
+            <textarea id="psHook" class="ps-hook" rows="2" maxlength="90" placeholder="Joke opener (optional), e.g. Nobody:&#10;Me at 2am: 🛒"></textarea>
+            <input id="psSticker" class="ps-sticker" maxlength="40" placeholder="Sticker (optional), e.g. Cheaper than therapy 🧠" />
+            <button id="psMake" type="button">Make Short</button>
+            <span class="help" id="psStatus"></span>
+          </div>
+          <div class="ps-grid" id="psList"></div>
+        </section>
+
+        <section class="panel" id="weekly-shorts">
+          <h2>Weekly Shorts (YouTube + Instagram)</h2>
+          <p class="help">
+            Once a week the portal makes a new Short in the same flashy style as your approved 30th Celebration Short, featuring a rotating in-stock item
+            (good-value items first, at the site's current price, never changed), then posts it to YouTube Shorts and Instagram Reels.
+            "Ask me first" waits for your Approve; the very first one always waits. Sound is generated effects only, so no copyright claims.
+            Setup steps: <code>docs/weekly-shorts.md</code>.
+          </p>
+          <div class="row" id="wsConnections"></div>
+          <form class="row" id="wsIgForm" style="display: none" autocomplete="off">
+            <input id="wsIgAppId" placeholder="Meta App ID" />
+            <input id="wsIgSecret" type="password" placeholder="Meta App secret" />
+            <input id="wsIgToken" type="password" placeholder="User access token (Graph API Explorer)" />
+            <button type="submit">Connect Instagram</button>
+          </form>
+          <div class="row">
+            <label><input type="checkbox" id="wsEnabled" /> On</label>
+            <label>Day <select id="wsDay"></select></label>
+            <label>Time (Pacific) <input type="time" id="wsTime" /></label>
+            <label>Mode <select id="wsMode"><option value="auto">Auto-post</option><option value="ask">Ask me first</option></select></label>
+            <label><input type="checkbox" id="wsYt" /> YouTube</label>
+            <label><input type="checkbox" id="wsIg" /> Instagram</label>
+            <button type="button" id="wsSave">Save</button>
+          </div>
+          <div class="row">
+            <label>Never mention (comma separated, e.g. your city) <input id="wsBlock" type="password" style="min-width: 16rem" /></label>
+          </div>
+          <div class="row">
+            <span class="help" id="wsNext"></span>
+            <button type="button" class="subtle" id="wsSkip">Skip next week</button>
+            <button type="button" class="subtle" id="wsMakeNow">Make one now (waits for approval)</button>
+            <span class="help" id="wsStatus" role="status"></span>
+          </div>
+          <div class="ps-grid" id="wsList"></div>
+        </section>
+
+        <section class="panel" id="raise-after-sale">
+          <h2>Raise after sale</h2>
+          <p class="help" id="raRule"></p>
+          <div class="row">
+            <button type="button" class="subtle" id="raScan">Check recent sales now</button>
+            <span class="help" id="raStatus" role="status"></span>
+          </div>
+          <div id="raList"></div>
+        </section>
+
+        <section class="panel">
+          <h2>Limited items</h2>
+          <p class="help" id="liRule"></p>
+          <div class="row">
+            <label><input type="checkbox" id="liEnabled" /> On (owner only, from this PC)</label>
+            <span class="help" id="liStatus" role="status"></span>
+          </div>
+          <div id="liItems"></div>
+          <div id="liHistory"></div>
+        </section>
+
+        <section class="panel">
+          <h2>Website orders</h2>
+          <p class="help">"Came from" shows the link the buyer used, like youtube or ig-bio, so you can see which posts and videos sell. Zelle and Venmo orders hold their stock for 24 hours; ship them only after you mark them paid.</p>
+          <p class="mk-scam" id="mkScam" hidden><strong>Scam check:</strong> Only mark paid after you see it in your bank app (Zelle) or Venmo app, with the order number in the memo. Ignore emails or texts claiming a Zelle or Venmo payment is "pending" or needs you to do something.</p>
+          <p class="help" id="mkOrdersStatus" role="status"></p>
+          <div id="mkOrders"></div>
+        </section>
+
+        <section class="panel">
+          <h2>California sales tax</h2>
+          <p class="help">Paid website orders by month, for your CDTFA return. Tax collected is not income: "Total sales" leaves it out, just like the Sold sheet. Shipping on CA orders is untaxed only up to what the postage actually cost; any amount charged above the postage is taxable and goes on the return.</p>
+          <div class="row">
+            <label>From <input type="date" id="taxFrom" /></label>
+            <label>To <input type="date" id="taxTo" /></label>
+            <button type="button" id="taxLoad">Show</button>
+            <a id="taxCsv" href="#" download><button type="button" class="subtle">Download CSV</button></a>
+          </div>
+          <div id="taxReport"></div>
+        </section>
+      </main>
+    </div>
+    <script type="module" src="/inventory-nav.js"></script>
+    <script src="/inventory-marketing.js" defer></script>
+  </body>
+</html>

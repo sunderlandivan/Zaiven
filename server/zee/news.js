@@ -24,6 +24,36 @@ const FEEDS = {
   world: { q: "(war OR conflict OR Ukraine OR Gaza OR interest rates OR Federal Reserve OR inflation)", sortBy: "publishedAt" },
 };
 
+async function fetchGoogleRssFeed(query, pageSize = 6) {
+  const u = new URL("https://news.google.com/rss/search");
+  u.searchParams.set("q", query);
+  u.searchParams.set("hl", "en-US");
+  u.searchParams.set("gl", "US");
+  u.searchParams.set("ceid", "US:en");
+  const res = await axios.get(u.toString(), { timeout: 15000 });
+  const xml = String(res.data || "");
+  const items = [];
+  const re = /<item>([\s\S]*?)<\/item>/gi;
+  let m;
+  while ((m = re.exec(xml))) {
+    const block = m[1] || "";
+    const title = String((block.match(/<title>([\s\S]*?)<\/title>/i) || [])[1] || "")
+      .replace(/<!\[CDATA\[|\]\]>/g, "")
+      .trim();
+    const link = String((block.match(/<link>([\s\S]*?)<\/link>/i) || [])[1] || "").trim();
+    const pubDate = String((block.match(/<pubDate>([\s\S]*?)<\/pubDate>/i) || [])[1] || "").trim();
+    if (!title || !link) continue;
+    items.push({
+      title,
+      source: "Google News",
+      url: link,
+      publishedAt: pubDate,
+    });
+    if (items.length >= pageSize) break;
+  }
+  return items;
+}
+
 export const ZEE_NEWS_TOPICS = Object.keys(FEEDS);
 
 /**
@@ -61,6 +91,11 @@ export async function fetchNewsFeed(topic, { pageSize = 6 } = {}) {
     if (isRateLimit) {
       newsBlockedUntil = Date.now() + NEWS_COOLDOWN_MS;
       if (cached?.items?.length) return cached.items;
+      const rss = await fetchGoogleRssFeed(cfg.q, Math.min(8, Math.max(1, pageSize)));
+      if (rss.length) {
+        feedCache.set(topic, { at: Date.now(), items: rss });
+        return rss;
+      }
       return [];
     }
     throw e;
@@ -105,7 +140,7 @@ export async function fetchNewsFeed(topic, { pageSize = 6 } = {}) {
 }
 
 export async function getAllNewsFeeds() {
-  const topics = /** @type {(keyof typeof FEEDS)[]} */ (["nvidia", "star_citizen", "steam", "world"]);
+  const topics = /** @type {(keyof typeof FEEDS)[]} */ (["world", "nvidia", "steam", "star_citizen"]);
   const feeds = {};
   await Promise.all(
     topics.map(async (t) => {

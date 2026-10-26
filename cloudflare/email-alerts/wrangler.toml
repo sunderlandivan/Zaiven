@@ -1,0 +1,20 @@
+name = "preeminent-email-alerts"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+workers_dev = false
+
+# Bound to sales@preeminentstore.com through Email Routing (rule action "Send to a Worker").
+# Every message is forwarded to FORWARD_TO first; alerts are best-effort on top.
+# Secret: RESEND_API_KEY (wrangler secret put RESEND_API_KEY)
+[vars]
+FORWARD_TO = "iv3nsun@gmail.com"
+ALERT_FROM = "PreEminent Alerts <alerts@preeminentstore.com>"
+ALERT_TO = "sales@preeminentstore.com"
+# domain=Label pairs; an entry without a dot (e.g. "peachstate") matches the sender's display name only. KV key "email-alerts:distributors" (same format) overrides this without a redeploy.
+DISTRIBUTORS = "acdd.com=ACD Distribution,goldriverdistributors.com=Gold River Distributors,gtsdistribution.com=GTS Distribution,wholesalegaming.com=Hills Wholesale Gaming,cartadistribution.com=Carta Distribution,sweetd.com=Sweet Deal,southernhobby.com=Southern Hobby Supply,universaldist.com=Universal Distribution,alliance-games.com=Alliance Game Distributors,phdgames.com=PHD Games,peachstate=Peachstate Hobby Distribution,madal.com=Madal Hobby"
+# A subject containing this token is treated as a distributor reply (for end-to-end tests).
+TEST_SUBJECT_TOKEN = "PEX-ALERT-TEST-4417"
+
+[[kv_namespaces]]
+binding = "STORE"
+id = "f655ff3db54a4aafbd9d98902564dbe7"

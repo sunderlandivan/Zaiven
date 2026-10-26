@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Loan — TCG Inventory</title>
+    <link rel="icon" type="image/png" href="/brand/logo.png" />
+    <link rel="stylesheet" href="/inventory.css" />
+    <script src="/portal-ui.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" crossorigin="anonymous"></script>
+  </head>
+  <body data-page="loan">
+    <div class="app-shell">
+      <aside class="nav-pane">
+        <div class="nav-brand">The PreEminent Store - Portal</div>
+        <nav class="nav-links">
+          <div class="nav-group">Daily</div>
+          <a class="nav-link" href="/inventory-orders.html">Order Tracking</a>
+          <a class="nav-link" href="/inventory-stock.html">Inventory</a>
+          <div class="nav-group">Business</div>
+          <a class="nav-link" href="/inventory-sheet-sync.html">Sheet Sync</a>
+          <a class="nav-link" href="/inventory-analytics.html">Selling Analytics</a>
+          <a class="nav-link" href="/inventory-dashboard-analytics.html">Dashboard Analytics</a>
+          <a class="nav-link" href="/inventory-marketing.html">Marketing</a>
+          <a class="nav-link" href="/inventory-import.html">Import and Pricing</a>
+          <a class="nav-link" href="/inventory-treasure-hunt.html">Treasure Hunt</a>
+          <div class="nav-group">Owner</div>
+          <a class="nav-link" href="/inventory-tax-prep.html">Tax Prep</a>
+          <a class="nav-link active" href="/inventory-loan.html">Loan</a>
+        </nav>
+      </aside>
+      <main class="nav-content">
+        <header class="content-header tax-prep-header">
+          <div class="page-heading">
+            <h1>Loan</h1>
+            <p class="page-subtitle">Track the inventory loan balance and record repayments.</p>
+          </div>
+          <div class="row tax-prep-toolbar">
+            <button id="loanReloadBtn" type="button" class="subtle">Reload</button>
+          </div>
+        </header>
+
+        <p class="help">
+          Tracks money loaned for inventory purchases and repayments over time. Totals match your repayment spreadsheet:
+          remaining = loan amount + sum of transfers (transfers are stored as negative amounts).
+        </p>
+
+        <section class="panel">
+          <h2>At a glance</h2>
+          <div id="loanKpis" class="dashboard-kpi-grid"></div>
+          <div class="loan-progress-wrap" aria-label="Payoff progress">
+            <div class="loan-progress-meta">
+              <span id="loanProgressLabel">Payoff progress</span>
+              <strong id="loanProgressPct">—</strong>
+            </div>
+            <div class="loan-progress-track">
+              <div id="loanProgressBar" class="loan-progress-bar" style="width: 0%"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>Visuals</h2>
+          <div class="dashboard-chart-grid">
+            <div class="chart-surface">
+              <h3>Paid vs remaining</h3>
+              <p class="help">Share of the original loan already repaid.</p>
+              <div class="chart-wrap"><canvas id="chartLoanSplit" aria-label="Paid versus remaining doughnut"></canvas></div>
+            </div>
+            <div class="chart-surface chart-surface--wide">
+              <h3>Balance over time</h3>
+              <p class="help">Remaining principal after each repayment, plus cumulative dollars paid.</p>
+              <div class="chart-wrap chart-wrap--tall">
+                <canvas id="chartLoanBalance" aria-label="Loan balance over time"></canvas>
+              </div>
+            </div>
+            <div class="chart-surface chart-surface--wide">
+              <h3>Payments by month</h3>
+              <p class="help">Total dollars transferred each month.</p>
+              <div class="chart-wrap chart-wrap--tall">
+                <canvas id="chartLoanByMonth" aria-label="Payments by month bar chart"></canvas>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="tax-section-head">
+            <h2>Bank / pending</h2>
+            <button id="loanSaveMetaBtn" type="button" class="subtle">Save</button>
+          </div>
+          <div class="loan-meta-grid">
+            <label>
+              Total loan amount
+              <input id="loanPrincipalInput" type="number" step="0.01" min="0" />
+            </label>
+            <label>
+              Current in bank
+              <input id="loanBankInput" type="number" step="0.01" placeholder="Optional" />
+            </label>
+            <label>
+              Pending payment
+              <input id="loanPendingInput" type="number" step="0.01" placeholder="Optional" />
+            </label>
+            <label class="loan-meta-span">
+              Notes
+              <input id="loanNotesInput" type="text" placeholder="Optional note" />
+            </label>
+          </div>
+          <p class="help">
+            Total incoming / banked (current + pending): <strong id="loanIncomingTotal">—</strong>
+          </p>
+        </section>
+
+        <section class="panel">
+          <div class="tax-section-head">
+            <h2>Add repayment</h2>
+          </div>
+          <form id="loanAddForm" class="loan-add-form">
+            <label>
+              Date received
+              <input id="loanPayDate" type="date" required />
+            </label>
+            <label>
+              Amount transferred
+              <input id="loanPayAmount" type="number" step="0.01" min="0.01" placeholder="e.g. 2500" required />
+            </label>
+            <label>
+              Note
+              <input id="loanPayNote" type="text" placeholder="Optional" />
+            </label>
+            <button type="submit">Add payment</button>
+          </form>
+          <p class="help">Enter a positive amount; it is stored as a repayment (negative transfer), same as the sheet.</p>
+        </section>
+
+        <section class="panel">
+          <div class="tax-section-head">
+            <h2>Payment history</h2>
+          </div>
+          <div class="table-wrap tax-table-wrap">
+            <table class="tax-sheet" id="loanHistoryTable">
+              <thead>
+                <tr>
+                  <th>Date received</th>
+                  <th class="num">Amount transferred</th>
+                  <th class="num">Cumulative paid</th>
+                  <th class="num">Balance after</th>
+                  <th>Note</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+
+        <p id="loanStatus" class="status"></p>
+      </main>
+    </div>
+    <script type="module" src="/inventory-nav.js"></script>
+    <script src="/inventory-loan.js" defer></script>
+  </body>
+</html>

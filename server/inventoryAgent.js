@@ -1,9 +1,12 @@
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
 import xlsx from "xlsx";
 import axios from "axios";
+import { decorateOrderShipment } from "./shipmentKind.js";
 
-const DATA_DIR = path.resolve("data");
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const DATA_DIR = path.join(__dirname, "..", "data");
 const INVENTORY_DB_PATH = path.join(DATA_DIR, "inventory-db.json");
 
 /** TCGplayer marketplace search API (public JSON; two-step: resultId then products). */
@@ -29,6 +32,7 @@ const MAX_LOOKUP_CANDIDATES = 14;
 const MAX_SEARCH_CANDIDATES_PER_ITEM = 8;
 const ORDERS_DB_PATH = path.join(DATA_DIR, "orders-db.json");
 const WORKFLOW_DB_PATH = path.join(DATA_DIR, "inventory-workflow-db.json");
+const PROFIT_HISTORY_PATH = path.join(DATA_DIR, "inventory-profit-history.json");
 
 const DEFAULT_SETTINGS = {
   feeProfiles: {
@@ -62,6 +66,245 @@ function ensureDataFiles() {
   if (!fs.existsSync(WORKFLOW_DB_PATH)) {
     fs.writeFileSync(WORKFLOW_DB_PATH, JSON.stringify({ items: {} }, null, 2));
   }
+  if (!fs.existsSync(PROFIT_HISTORY_PATH)) {
+    fs.writeFileSync(PROFIT_HISTORY_PATH, JSON.stringify({ snapshots: [] }, null, 2));
+  }
+}
+
+function readProfitHistory() {
+  return readJson(PROFIT_HISTORY_PATH);
+}
+
+function computeProfitWinnersOnlyTotal({ stripMarketPrices = false, items = null, settings = null } = {}) {
+  const db = readJson(INVENTORY_DB_PATH);
+  const rows = items ?? db.items ?? [];
+  const cfg = settings ?? db.settings ?? DEFAULT_SETTINGS;
+  let total = 0;
+  for (const item of rows) {
+    const row = stripMarketPrices
+      ? {
+          ...item,
+          market: {
+            ...item.market,
+            tcgplayerMarket: null,
+            soldMedian: null,
+            activeLowest: null,
+            sheetFallbackUsed: false,
+          },
+        }
+      : item;
+    const evaluated = evaluateItem(row, cfg);
+    const lineProfit = evaluated.metrics.totalBestProfit;
+    const profitTotal = Number.isFinite(Number(lineProfit)) ? Number(lineProfit) : 0;
+    if (profitTotal > 0) total += profitTotal;
+  }
+  return total;
+}
+
+function latestPriceRefreshAt(db) {
+  let latest = null;
+  for (const item of db.items || []) {
+    const t = item?.market?.lastCheckedAt;
+    if (!t) continue;
+    if (!latest || t > latest) latest = t;
+  }
+  return latest;
+}
+
+function recordImportHistoryEntry(db, filePath, importedAt, itemCount, items) {
+  if (!Array.isArray(db.importHistory)) db.importHistory = [];
+  db.importHistory.push({
+    at: importedAt,
+    sourceFilePath: filePath,
+    itemCount,
+    profitWinnersOnly: computeProfitWinnersOnlyTotal({
+      stripMarketPrices: true,
+      items,
+      settings: db.settings || DEFAULT_SETTINGS,
+    }),
+  });
+  if (db.importHistory.length > 200) {
+    db.importHistory = db.importHistory.slice(-200);
+  }
+}
+
+function mergeSnapshot(snapshots, entry, windowMs = 60 * 1000) {
+  const entryMs = new Date(entry.at).getTime();
+  if (!Number.isFinite(entryMs)) return false;
+  const idx = snapshots.findIndex((s) => {
+    const sMs = new Date(s.at).getTime();
+    if (!Number.isFinite(sMs)) return false;
+    return Math.abs(sMs - entryMs) < windowMs && s.reason === entry.reason;
+  });
+  if (idx >= 0) {
+    let changed = false;
+    if (Number(snapshots[idx].profitWinnersOnly) !== Number(entry.profitWinnersOnly)) {
+      snapshots[idx].profitWinnersOnly = entry.profitWinnersOnly;
+      changed = true;
+    }
+    if (snapshots[idx].reason !== entry.reason) {
+      snapshots[idx].reason = entry.reason;
+      changed = true;
+    }
+    return changed;
+  }
+  snapshots.push(entry);
+  return true;
+}
+
+export function appendProfitHistorySnapshot(reason = "snapshot") {
+  const db = readJson(INVENTORY_DB_PATH);
+  if (!Array.isArray(db.items) || db.items.length === 0) return null;
+
+  const profitWinnersOnly = computeProfitWinnersOnlyTotal();
+  const history = readProfitHistory();
+  const snapshots = Array.isArray(history.snapshots) ? history.snapshots : [];
+  const last = snapshots[snapshots.length - 1];
+  const nowMs = Date.now();
+  const alwaysRecord = reason === "import";
+  if (
+    !alwaysRecord &&
+    last &&
+    Number(last.profitWinnersOnly) === profitWinnersOnly &&
+    nowMs - new Date(last.at).getTime() < 5 * 60 * 1000
+  ) {
+    return last;
+  }
+
+  const entry = { at: new Date().toISOString(), profitWinnersOnly, reason };
+  snapshots.push(entry);
+  const trimmed = snapshots.length > 500 ? snapshots.slice(-500) : snapshots;
+  writeJson(PROFIT_HISTORY_PATH, { snapshots: trimmed });
+  return entry;
+}
+
+function ensureProfitHistorySeeded() {
+  const db = readJson(INVENTORY_DB_PATH);
+  if (!Array.isArray(db.items) || db.items.length === 0) {
+    return { snapshots: [] };
+  }
+
+  let dbChanged = false;
+  if (!Array.isArray(db.importHistory)) {
+    db.importHistory = [];
+    dbChanged = true;
+  }
+  if (db.importedAt) {
+    const importMs = new Date(db.importedAt).getTime();
+    const hasImportRecord = db.importHistory.some((e) => {
+      const delta = Math.abs(new Date(e.at).getTime() - importMs);
+      return Number.isFinite(importMs) && delta < 60 * 1000;
+    });
+    if (!hasImportRecord && Number.isFinite(importMs)) {
+      recordImportHistoryEntry(db, db.sourceFilePath || null, db.importedAt, db.items.length, db.items);
+      dbChanged = true;
+    }
+  }
+  if (dbChanged) writeJson(INVENTORY_DB_PATH, db);
+
+  const history = readProfitHistory();
+  let snapshots = Array.isArray(history.snapshots) ? [...history.snapshots] : [];
+  let changed = false;
+
+  // Drop one-off dashboard seeds when we can rebuild real events.
+  const hasRealEvents =
+    (db.importHistory?.length || 0) > 0 || Boolean(latestPriceRefreshAt(db));
+  if (hasRealEvents) {
+    const before = snapshots.length;
+    snapshots = snapshots.filter((s) => s.reason !== "initial");
+    if (snapshots.length !== before) changed = true;
+  }
+
+  for (const imp of db.importHistory || []) {
+    const profit = Number.isFinite(Number(imp.profitWinnersOnly))
+      ? Number(imp.profitWinnersOnly)
+      : computeProfitWinnersOnlyTotal({ stripMarketPrices: true });
+    if (
+      mergeSnapshot(
+        snapshots,
+        { at: imp.at, profitWinnersOnly: profit, reason: "import" },
+        60 * 1000
+      )
+    ) {
+      changed = true;
+    }
+    // Correct legacy import-backfill rows that used post-refresh profit.
+    const importMs = new Date(imp.at).getTime();
+    for (const s of snapshots) {
+      if (s.reason !== "import-backfill") continue;
+      const delta = Math.abs(new Date(s.at).getTime() - importMs);
+      if (delta < 60 * 1000 && Number(s.profitWinnersOnly) !== profit) {
+        s.profitWinnersOnly = profit;
+        s.reason = "import";
+        changed = true;
+      }
+    }
+  }
+
+  const refreshAt = latestPriceRefreshAt(db);
+  if (refreshAt) {
+    const profitAfterRefresh = computeProfitWinnersOnlyTotal();
+    if (
+      mergeSnapshot(
+        snapshots,
+        { at: refreshAt, profitWinnersOnly: profitAfterRefresh, reason: "refresh" },
+        60 * 1000
+      )
+    ) {
+      changed = true;
+    }
+  }
+
+  if (!snapshots.length) {
+    snapshots.push({
+      at: new Date().toISOString(),
+      profitWinnersOnly: computeProfitWinnersOnlyTotal(),
+      reason: "initial",
+    });
+    changed = true;
+  }
+
+  if (changed) {
+    snapshots.sort((a, b) => String(a.at).localeCompare(String(b.at)));
+    snapshots = dedupeProfitSnapshots(snapshots);
+    writeJson(PROFIT_HISTORY_PATH, { snapshots });
+  }
+
+  return { snapshots: dedupeProfitSnapshots(snapshots) };
+}
+
+function dedupeProfitSnapshots(snapshots) {
+  const sorted = [...snapshots].sort((a, b) => String(a.at).localeCompare(String(b.at)));
+  const out = [];
+  for (const snap of sorted) {
+    const snapMs = new Date(snap.at).getTime();
+    const snapImport = snap.reason === "import" || snap.reason === "import-backfill";
+    const dupIdx = out.findIndex((existing) => {
+      const existingMs = new Date(existing.at).getTime();
+      if (!Number.isFinite(snapMs) || !Number.isFinite(existingMs)) return false;
+      const sameTime = Math.abs(existingMs - snapMs) < 60 * 1000;
+      if (!sameTime) return false;
+      const existingImport = existing.reason === "import" || existing.reason === "import-backfill";
+      return snapImport && existingImport ? true : existing.reason === snap.reason;
+    });
+    if (dupIdx >= 0) {
+      out[dupIdx] = {
+        ...out[dupIdx],
+        ...snap,
+        reason: snapImport ? "import" : snap.reason,
+      };
+      continue;
+    }
+    out.push({
+      ...snap,
+      reason: snapImport ? "import" : snap.reason,
+    });
+  }
+  return out;
+}
+
+export function getProfitHistory() {
+  return ensureProfitHistorySeeded();
 }
 
 function readJson(filePath) {
@@ -74,8 +317,9 @@ function writeJson(filePath, value) {
   fs.writeFileSync(filePath, JSON.stringify(value, null, 2));
 }
 
-function normalizeName(raw) {
+export function normalizeName(raw) {
   return String(raw || "")
+    .replace(/^\uFEFF/, "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
@@ -181,12 +425,51 @@ function buildLookupCandidates(rawName, itemType) {
   return unique(candidates).slice(0, MAX_LOOKUP_CANDIDATES);
 }
 
+function headerLooksLikeProductNameColumn(h) {
+  if (!h) return false;
+  const keys = ["item id", "product name", "item name", "name", "title", "product"];
+  if (keys.some((k) => h === k || h.includes(k))) return true;
+  if (!h.includes("item")) return false;
+  // Avoid treating "… per item", "… for item", etc. as the product-name column.
+  if (/\b(per|for|after|before)\s+item\b/.test(h)) return false;
+  if (/\bfees\s+per\s+item\b|\bprofit\s+per\s+item\b|\bshipping\s+per\s+item\b/.test(h)) return false;
+  return true;
+}
+
+function inventoryHeaderRowScore(cells) {
+  if (!Array.isArray(cells) || !cells.length) return -1;
+  const normalized = cells.map((c) => normalizeName(String(c ?? "")));
+  let score = 0;
+  if (normalized.some((h) => ["qty", "quantity", "count", "stock"].some((k) => h === k || h.includes(k)))) score += 3;
+  if (normalized.some((h) => headerLooksLikeProductNameColumn(h))) score += 3;
+  if (normalized.some((h) => h.includes("tcg") && h.includes("link"))) score += 1;
+  // PreEminent-style FULL export: "Cost w/ Tax", "Unit cost", etc.
+  if (normalized.some((h) => h.includes("cost") && !/\b(per|for)\s+item\b/.test(h))) score += 1;
+  return score;
+}
+
+/** Some exports have a title row above the real header; pick the strongest header-like row in the first lines. */
+function pickInventoryHeaderRowIndex(rows) {
+  const maxScan = Math.min(30, rows.length);
+  let bestIdx = 0;
+  let bestScore = -1;
+  for (let i = 0; i < maxScan; i++) {
+    const s = inventoryHeaderRowScore(rows[i]);
+    if (s > bestScore) {
+      bestScore = s;
+      bestIdx = i;
+    }
+  }
+  if (bestScore < 3) return 0;
+  return bestIdx;
+}
+
 function detectColumns(headerRow) {
   const normalized = headerRow.map((h) => normalizeName(h));
   const idxByKeyword = (keywords) =>
     normalized.findIndex((h) => keywords.some((k) => h.includes(k)));
 
-  const nameIdx = idxByKeyword(["name", "title", "product", "item"]);
+  const nameIdx = normalized.findIndex(headerLooksLikeProductNameColumn);
   const qtyIdx = idxByKeyword(["qty", "quantity", "count", "stock"]);
   const costIdx = idxByKeyword(["cost", "unit cost", "purchase", "bought", "price paid"]);
   const typeIdx = idxByKeyword(["type", "item type", "product type", "format"]);
@@ -738,7 +1021,7 @@ function evaluateItem(item, settings) {
       ebayLastSoldDate: null,
       tcgplayerMarketPrice: signals.tcgplayerMarket ?? null,
       sourceUrl: resolveTcgplayerSourceUrl(
-        signals.sourceUrl,
+        signals.sheetProductUrl || signals.sourceUrl,
         signals.lookupQueryUsed ?? signals.lookupQuery ?? item.productName
       ),
       sourceQuery: signals.lookupQueryUsed ?? signals.lookupQuery ?? item.productName,
@@ -766,21 +1049,37 @@ function evaluateItem(item, settings) {
   };
 }
 
+/**
+ * Workbooks with a tab named "FULL" (case-insensitive, trimmed) import only that sheet.
+ * Expected vendor layout (Google Sheets → .xlsx): row 1 headers such as
+ * Item ID | Qty | Cost w/ Tax | Total Inv $ (optional) | TCG Link — qty 0 rows kept; other tabs ignored.
+ * Otherwise the first sheet is used for legacy files.
+ */
+function pickInventorySheetName(workbook) {
+  const names = workbook.SheetNames || [];
+  if (!names.length) return "";
+  const fullName = names.find((n) => String(n).trim().toLowerCase() === "full");
+  return fullName != null ? fullName : names[0];
+}
+
 export function importInventoryFromExcel(filePath) {
   ensureDataFiles();
   if (!fs.existsSync(filePath)) {
     throw new Error(`Inventory file not found: ${filePath}`);
   }
 
-  const workbook = xlsx.readFile(filePath);
-  const firstSheetName = workbook.SheetNames[0];
-  if (!firstSheetName) throw new Error("Excel workbook has no sheets.");
-  const sheet = workbook.Sheets[firstSheetName];
+  const workbook = xlsx.readFile(filePath, { raw: false });
+  const sheetName = pickInventorySheetName(workbook);
+  if (!sheetName) throw new Error("Excel workbook has no sheets.");
+  const sheet = workbook.Sheets[sheetName];
+  if (!sheet) throw new Error(`Excel workbook has no sheet named "${sheetName}".`);
   const rows = xlsx.utils.sheet_to_json(sheet, { header: 1, raw: false, defval: "" });
-  if (!rows.length) throw new Error("Excel sheet appears empty.");
+  if (!rows.length) throw new Error(`Excel sheet "${sheetName}" appears empty.`);
 
-  const [headerRow, ...dataRows] = rows;
-  const { nameIdx, qtyIdx, costIdx, typeIdx, linkIdx } = detectColumns(headerRow.map((h) => String(h)));
+  const headerRowIndex = pickInventoryHeaderRowIndex(rows);
+  const headerRow = rows[headerRowIndex].map((h) => String(h ?? ""));
+  const dataRows = rows.slice(headerRowIndex + 1);
+  const { nameIdx, qtyIdx, costIdx, typeIdx, linkIdx } = detectColumns(headerRow);
 
   /** One inventory line per Excel data row (no merge by name) so every row is priced on refresh. */
   const items = [];
@@ -794,7 +1093,7 @@ export function importInventoryFromExcel(filePath) {
     const itemType = typeIdx >= 0 ? String(row[typeIdx] ?? "").trim() : "";
     const linkRaw = linkIdx >= 0 ? String(row[linkIdx] ?? "").trim() : "";
     const sheetProductUrl = normalizeTcgplayerHref(linkRaw) || null;
-    if (!quantity) continue;
+    // Keep qty 0 lines so the portal matches the spreadsheet (skipping them left stale rows after re-import).
 
     const normalizedKey = normalizeName(rawName);
     items.push({
@@ -819,16 +1118,28 @@ export function importInventoryFromExcel(filePath) {
     });
   }
 
+  if (!items.length && dataRows.length > 0) {
+    throw new Error(
+      `No inventory rows imported from sheet "${sheetName}" (${dataRows.length} lines below the detected header). ` +
+        `Check that a header row includes product/item titles and a Qty column, or that the correct tab is selected.`
+    );
+  }
+
   const db = readJson(INVENTORY_DB_PATH);
-  db.importedAt = new Date().toISOString();
+  const importedAt = new Date().toISOString();
+  db.importedAt = importedAt;
   db.sourceFilePath = filePath;
   db.items = items;
+  recordImportHistoryEntry(db, filePath, importedAt, items.length, items);
   writeJson(INVENTORY_DB_PATH, db);
+  appendProfitHistorySnapshot("import");
 
   return {
     importedAt: db.importedAt,
     itemCount: db.items.length,
     sourceFilePath: db.sourceFilePath,
+    sheetName,
+    headerRowIndex,
   };
 }
 
@@ -953,12 +1264,38 @@ async function fetchPriceSignalsWithFallback(rawQuery, itemType, sheetProductUrl
   return fetchPriceSignalsFromSearchOnly(rawQuery, itemType);
 }
 
+/**
+ * TCGplayer reference list price for Treasure Hunt scans (same paths as inventory refresh: sheet link or search).
+ */
+export async function getTcgplayerReferenceMarketForTreasure(item) {
+  const signals = await fetchPriceSignalsWithFallback(
+    item.productName || "",
+    item.itemType || "",
+    item.market?.sheetProductUrl || null
+  );
+  return {
+    marketPrice: signals.tcgplayerMarket,
+    sourceUrl: signals.sourceUrl,
+    sheetFallbackUsed: Boolean(signals.sheetFallbackUsed),
+    bestFit: signals.bestFit ?? null,
+  };
+}
+
 export async function refreshMarketData() {
   const db = readJson(INVENTORY_DB_PATH);
   const targets = db.items;
 
   for (let i = 0; i < targets.length; i++) {
     const item = targets[i];
+    const lineQty = Number(item.quantity || 0);
+    if (lineQty <= 0) {
+      item.market.lastCheckedAt = new Date().toISOString();
+      if (i < targets.length - 1 && BULK_REFRESH_DELAY_MS > 0) {
+        await new Promise((r) => setTimeout(r, BULK_REFRESH_DELAY_MS));
+      }
+      writeJson(INVENTORY_DB_PATH, db);
+      continue;
+    }
     try {
       const lookupQuery = item.market.overrideQuery || item.market.lookupQuery || item.productName;
       const sheetUrl = item.market.sheetProductUrl || null;
@@ -992,6 +1329,7 @@ export async function refreshMarketData() {
     writeJson(INVENTORY_DB_PATH, db);
   }
 
+  appendProfitHistorySnapshot("refresh");
   return { refreshed: targets.length };
 }
 
@@ -1096,6 +1434,7 @@ export function getInventoryDashboard() {
     recommendations,
     items: evaluated,
     settings,
+    profitHistory: getProfitHistory().snapshots,
   };
 }
 
@@ -1181,8 +1520,8 @@ function parseCsvNumber(v) {
   return Number.isFinite(n) ? n : 0;
 }
 
-/** Level 1–4 marketplace commission (post Feb 2026 help-center rate). */
-const TCG_L4_COMMISSION_RATE = 0.1075;
+/** Marketplace commission actually charged on this account (median of every 2026 order's real fee is 11.75%). */
+const TCG_L4_COMMISSION_RATE = 0.1175;
 /** Domestic transaction fee: percent of order total (items + ship + buyer tax) + fixed. */
 const TCG_L4_TRANSACTION_RATE = 0.025;
 const TCG_L4_TRANSACTION_FIXED = 0.3;
@@ -1293,7 +1632,7 @@ function tcgMarketplaceProCommissionTotal(sub) {
 }
 
 /**
- * Estimates TCGplayer marketplace fees (banker's rounding). Default profile is Level 1–4 (10.75% commission
+ * Estimates TCGplayer marketplace fees (banker's rounding). Default profile is Level 1–4 (11.75% commission
  * on subtotal with per-unit $75 cap when binding, plus 2.5% + $0.30 on charged total including buyer tax).
  * Set TCG_FEE_SELLER_PROFILE=pro for Marketplace Pro (9.25% + 2.5% on subtotal + same transaction fee).
  * @see https://help.tcgplayer.com/hc/en-us/articles/201357836-TCGplayer-Fees
@@ -1405,7 +1744,130 @@ export function listOrders() {
   applyAutoStampHeuristicsToAllOrders();
   applyDefaultTcgFeesToAllOrders();
   const db = readJson(ORDERS_DB_PATH);
-  return Array.isArray(db.orders) ? db.orders : [];
+  return Array.isArray(db.orders) ? db.orders.map(decorateOrderShipment) : [];
+}
+
+/** USPS label barcodes prefix the 22-digit IMpb with "420" + ZIP or ZIP+4. */
+export function coreTrackingNumber(v) {
+  const s = String(v || "").replace(/\s+/g, "").toUpperCase();
+  if (/^420\d{31}$/.test(s)) return s.slice(12);
+  if (/^420\d{27}$/.test(s)) return s.slice(8);
+  return s;
+}
+
+function looksLikeRealTracking(t) {
+  return /^(\d{20}|\d{22})$/.test(t) || /^1Z[0-9A-Z]{16}$/.test(t) || /^[A-Z]{2}\d{9}[A-Z]{2}$/.test(t);
+}
+
+/**
+ * TCGplayer ship-to export (Order #, Ship To Name, City, State, Postal Code, Tracking Numbers).
+ * Only updates orders already in the DB, and only fills blank fields; existing tracking is never replaced.
+ */
+function importShipToFromRows(headers, dataRows) {
+  const col = (...keys) => {
+    for (const k of keys) {
+      const i = headers.findIndex((h) => h.includes(k));
+      if (i >= 0) return i;
+    }
+    return -1;
+  };
+  const idx = {
+    order: col("order"),
+    name: col("ship to name", "recipient", "name"),
+    city: col("city"),
+    state: col("state", "territory"),
+    zip: col("postal code", "zip"),
+    tracking: col("tracking"),
+  };
+  if (idx.order < 0) throw new Error("Ship-to CSV needs an Order # column.");
+  const cell = (row, i) => (i >= 0 ? String(row[i] ?? "").replace(/\s+/g, " ").trim() : "");
+
+  const parsed = dataRows
+    .map((row) => {
+      const tokens = cell(row, idx.tracking).split(/\s+/).filter(Boolean);
+      return {
+        orderNumber: cell(row, idx.order),
+        name: cell(row, idx.name),
+        city: cell(row, idx.city),
+        state: cell(row, idx.state).toUpperCase(),
+        zip: (cell(row, idx.zip).match(/\d{5}/) || [""])[0],
+        tracking: [...new Set(tokens.map(coreTrackingNumber).filter(looksLikeRealTracking))],
+        shippedWithoutTracking: tokens.length > 0 && tokens.every((t) => /^shipped$/i.test(t)),
+      };
+    })
+    .filter((r) => r.orderNumber);
+
+  // A number listed on more than one TCGplayer order is a data-entry slip there; never copy it.
+  const seen = new Map();
+  for (const r of parsed) for (const t of r.tracking) seen.set(t, (seen.get(t) || 0) + 1);
+
+  const db = readJson(ORDERS_DB_PATH);
+  const orders = Array.isArray(db.orders) ? db.orders : [];
+  const byNumber = new Map(orders.map((o) => [String(o.orderNumber || "").trim(), o]));
+  const usedTracking = new Set(orders.map((o) => coreTrackingNumber(o.trackingNumber)).filter(Boolean));
+  const now = new Date().toISOString();
+  const result = {
+    kind: "ship-to",
+    rows: parsed.length,
+    matchedOrders: 0,
+    notInDb: 0,
+    zipFilled: 0,
+    shipToNameFilled: 0,
+    trackingFilled: 0,
+    markedNoTracking: 0,
+    skippedDuplicateTracking: [],
+    trackingConflicts: [],
+  };
+
+  for (const r of parsed) {
+    const o = byNumber.get(r.orderNumber);
+    if (!o) {
+      result.notInDb += 1;
+      continue;
+    }
+    result.matchedOrders += 1;
+    let changed = false;
+    if (r.zip && !String(o.shipToZip || "").trim()) {
+      o.shipToZip = r.zip;
+      result.zipFilled += 1;
+      changed = true;
+    }
+    if (r.name && !String(o.shipToName || "").trim()) {
+      o.shipToName = r.name;
+      result.shipToNameFilled += 1;
+      changed = true;
+    }
+    if (r.city && !o.shipToCity) o.shipToCity = r.city;
+    if (r.state && !o.shipToState) o.shipToState = r.state;
+    if (r.tracking.length) o.tcgTrackingNumbers = r.tracking;
+
+    const current = coreTrackingNumber(o.trackingNumber);
+    const unique = r.tracking.filter((t) => seen.get(t) === 1);
+    for (const t of r.tracking) if (seen.get(t) > 1) result.skippedDuplicateTracking.push({ orderNumber: r.orderNumber, tracking: t });
+    if (current) {
+      if (r.tracking.length && !r.tracking.includes(current)) {
+        result.trackingConflicts.push({ orderNumber: r.orderNumber, stored: o.trackingNumber, tcgplayer: r.tracking });
+      }
+    } else if (unique.length === 1 && !usedTracking.has(unique[0])) {
+      o.trackingNumber = unique[0];
+      o.carrier = o.carrier || (unique[0].startsWith("1Z") ? "UPS" : "USPS");
+      o.trackingSource = "tcgplayer-export";
+      o.noTrackingNeeded = false;
+      o.stampAuto = false;
+      usedTracking.add(unique[0]);
+      result.trackingFilled += 1;
+      changed = true;
+    } else if (r.shippedWithoutTracking && !o.noTrackingNeeded && o.stampAuto !== false) {
+      o.noTrackingNeeded = true;
+      o.stampAuto = false;
+      o.noTrackingSource = "tcgplayer-shipped-without-tracking";
+      result.markedNoTracking += 1;
+      changed = true;
+    }
+    if (changed) o.updatedAt = now;
+  }
+  writeJson(ORDERS_DB_PATH, db);
+  return result;
 }
 
 export function importOrdersFromCsv(filePath, { replaceExisting = false } = {}) {
@@ -1424,6 +1886,9 @@ export function importOrdersFromCsv(filePath, { replaceExisting = false } = {}) 
   const [headerRow, ...dataRows] = rows;
   const headers = headerRow.map((h) => normalizeName(h));
   const col = (keyword) => headers.findIndex((h) => h.includes(keyword));
+  const isShipToCsv =
+    (col("postal code") >= 0 || col("zip") >= 0) && col("product amt") < 0 && col("total amt") < 0;
+  if (isShipToCsv) return importShipToFromRows(headers, dataRows);
   const idxOrder = col("order");
   const idxBuyer = col("buyer name");
   const idxOrderDate = col("order date");
@@ -1469,25 +1934,29 @@ export function importOrdersFromCsv(filePath, { replaceExisting = false } = {}) 
     const totalAmt = parseCsvNumber(row[idxTotalAmt]);
     const taxFromCsv = idxTaxAmt >= 0 ? parseCsvNumber(row[idxTaxAmt]) : 0;
     const isTcg = /tcg/i.test(String(row[idxChannel] ?? ""));
+    // Existing orders keep their stored values; the CSV only fills blanks (status/channel still refresh).
+    const csvBuyer = String(row[idxBuyer] ?? "").replace(/\s+/g, " ").trim();
     const rowOrder = {
-      id: `tcg_${orderNum}`,
+      id: prev?.id || `tcg_${orderNum}`,
       orderNumber: orderNum,
-      buyerName: String(row[idxBuyer] ?? "").trim() || null,
-      productName: `TCGplayer Order ${orderNum}`,
-      quantity: 1,
-      salePrice: parseCsvNumber(row[idxProductAmt]),
-      platform: isTcg ? "tcgplayer" : "other",
-      feeAmount: 0,
-      shippingCost: parseCsvNumber(row[idxShippingAmt]),
+      buyerName: String(prev?.buyerName || "").trim() || csvBuyer || null,
+      productName: prev?.productName || `TCGplayer Order ${orderNum}`,
+      quantity: Number(prev?.quantity) || 1,
+      salePrice: Number(prev?.salePrice || 0) || parseCsvNumber(row[idxProductAmt]),
+      platform: isTcg ? "tcgplayer" : prev?.platform || "other",
+      feeAmount: Number(prev?.feeAmount || 0),
+      shippingCost: Number(prev?.shippingCost || 0) || parseCsvNumber(row[idxShippingAmt]),
       trackingNumber,
-      noTrackingNeeded: false,
-      purchaseDate: parseOrderDateForStorage(row[idxOrderDate]),
-      status: String(row[idxStatus] ?? "").trim() || null,
-      shippingType: String(row[idxShippingType] ?? "").trim() || null,
-      channel: String(row[idxChannel] ?? "").trim() || null,
-      orderAmount: totalAmt,
+      noTrackingNeeded: prev?.noTrackingNeeded || false,
+      ...(prev && "stampAuto" in prev ? { stampAuto: prev.stampAuto } : {}),
+      purchaseDate: prev?.purchaseDate || parseOrderDateForStorage(row[idxOrderDate]),
+      status: String(row[idxStatus] ?? "").trim() || prev?.status || null,
+      shippingType: String(row[idxShippingType] ?? "").trim() || prev?.shippingType || null,
+      channel: String(row[idxChannel] ?? "").trim() || prev?.channel || null,
+      orderAmount: Number(prev?.orderAmount || 0) || totalAmt,
       rawCarrierInfo,
-      createdAt: new Date().toISOString(),
+      createdAt: prev?.createdAt || new Date().toISOString(),
+      source: prev?.source || "csv",
       ...(taxFromCsv > 0 ? { buyerTax: taxFromCsv } : {}),
       ...(prev?.buyerTax != null && prev.buyerTax > 0 && !(taxFromCsv > 0) ? { buyerTax: prev.buyerTax } : {}),
       ...(prev?.lastEmailSyncAt ? { lastEmailSyncAt: prev.lastEmailSyncAt } : {}),
@@ -1496,9 +1965,31 @@ export function importOrdersFromCsv(filePath, { replaceExisting = false } = {}) 
     mapped.push(rowOrder);
   }
 
-  db.orders = replaceExisting ? mapped : [...mapped, ...existing];
+  if (replaceExisting) {
+    db.orders = mapped;
+  } else {
+    const byOrder = new Map();
+    for (const o of existing) {
+      const k = String(o.orderNumber || "").trim();
+      if (k) byOrder.set(k, o);
+    }
+    for (const row of mapped) {
+      const k = String(row.orderNumber || "").trim();
+      if (!k) continue;
+      const prev = byOrder.get(k);
+      if (prev) {
+        Object.assign(prev, row, { id: prev.id, createdAt: prev.createdAt || row.createdAt });
+        applyAutoStampHeuristicToOrder(prev);
+        byOrder.set(k, prev);
+      } else {
+        applyAutoStampHeuristicToOrder(row);
+        byOrder.set(k, row);
+      }
+    }
+    db.orders = [...byOrder.values()];
+  }
   for (const o of db.orders) {
-    applyAutoStampHeuristicToOrder(o);
+    if (replaceExisting) applyAutoStampHeuristicToOrder(o);
     applyDefaultTcgFeesToOrder(o);
   }
   writeJson(ORDERS_DB_PATH, db);
@@ -1510,7 +2001,7 @@ export function importOrdersFromCsv(filePath, { replaceExisting = false } = {}) 
   };
 }
 
-export function updateOrderTrackingStatus({ orderId, orderNumber, noTrackingNeeded }) {
+export function updateOrderTrackingStatus({ orderId, orderNumber, noTrackingNeeded, status }) {
   const db = readJson(ORDERS_DB_PATH);
   const orders = Array.isArray(db.orders) ? db.orders : [];
   const target = orders.find(
@@ -1524,6 +2015,8 @@ export function updateOrderTrackingStatus({ orderId, orderNumber, noTrackingNeed
   if (target.noTrackingNeeded) {
     target.trackingNumber = "";
   }
+  const safeStatus = String(status ?? "").trim();
+  if (safeStatus) target.status = safeStatus;
   target.updatedAt = new Date().toISOString();
   writeJson(ORDERS_DB_PATH, db);
   return target;

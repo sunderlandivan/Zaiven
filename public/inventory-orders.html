@@ -3,23 +3,38 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Order tracking — TCG Inventory</title>
+    <meta name="color-scheme" content="light dark" />
+    <title>Order Tracking — TCG Inventory</title>
+    <link rel="icon" type="image/png" href="/brand/logo.png" />
     <link rel="stylesheet" href="/inventory.css" />
+    <script src="/portal-ui.js"></script>
   </head>
   <body data-page="orders">
     <div class="app-shell">
       <aside class="nav-pane">
-        <div class="nav-brand">TCG Inventory</div>
+        <div class="nav-brand">The PreEminent Store - Portal</div>
         <nav class="nav-links">
-          <a class="nav-link" href="/inventory-import.html">Import &amp; pricing</a>
-          <a class="nav-link" href="/inventory-analytics.html">Sell &amp; analytics</a>
-          <a class="nav-link active" href="/inventory-orders.html">Order tracking</a>
+          <div class="nav-group">Daily</div>
+          <a class="nav-link active" href="/inventory-orders.html">Order Tracking</a>
+          <a class="nav-link" href="/inventory-stock.html">Inventory</a>
+          <div class="nav-group">Business</div>
+          <a class="nav-link" href="/inventory-sheet-sync.html">Sheet Sync</a>
+          <a class="nav-link" href="/inventory-analytics.html">Selling Analytics</a>
+          <a class="nav-link" href="/inventory-dashboard-analytics.html">Dashboard Analytics</a>
+          <a class="nav-link" href="/inventory-marketing.html">Marketing</a>
+          <a class="nav-link" href="/inventory-import.html">Import and Pricing</a>
+          <a class="nav-link" href="/inventory-treasure-hunt.html">Treasure Hunt</a>
+          <div class="nav-group">Owner</div>
+          <a class="nav-link" href="/inventory-tax-prep.html">Tax Prep</a>
+          <a class="nav-link" href="/inventory-loan.html">Loan</a>
         </nav>
-        <a class="nav-footer-link" href="/">← Game prototype</a>
       </aside>
       <main class="nav-content">
         <header class="content-header">
-          <h1>Order tracking</h1>
+          <div class="page-heading">
+            <h1>Order Tracking</h1>
+            <p class="page-subtitle">Every marketplace order with its shipping and tracking status.</p>
+          </div>
         </header>
 
         <section class="panel">
@@ -31,14 +46,25 @@
             <button id="syncGmailFullBtn" class="subtle" type="button">Sync Gmail (full YTD)</button>
           </div>
           <p class="help">
-            Reads TCGplayer seller emails and USPS label mail, then merges by order number when possible.
-            USPS Click‑N‑Ship uses its <strong>own</strong> order id (UUID), not your TCGplayer order # — we match those
-            labels to rows by <strong>buyer name + label date + postage vs shipping</strong>, so a wrong order date in
-            the CSV or a crowded inbox can still miss a row. Use <strong>Sync Gmail (full YTD)</strong> when you want a
-            deeper pass (slower). Mail is limited to on or after <strong>Jan&nbsp;1,&nbsp;2026</strong> unless
-            <code>GMAIL_SYNC_AFTER</code> is set.
+            Reads TCGplayer seller emails and USPS label mail, then merges by order number when possible. If no orders
+            exist yet, seller emails can create new rows; a TCGplayer CSV is still best for buyer names, shipping, and
+            status. USPS Click‑N‑Ship uses its <strong>own</strong> order id (UUID), not your TCGplayer order # — we
+            match those labels to rows by <strong>buyer name + label date + postage vs shipping</strong>. Use
+            <strong>Sync Gmail (full YTD)</strong> for a deeper pass (slower). Mail is limited to on or after
+            <strong>Jan&nbsp;1,&nbsp;2026</strong> unless <code>GMAIL_SYNC_AFTER</code> is set.
           </p>
           <p id="gmailSyncStatus" class="help"></p>
+        </section>
+
+        <section class="panel" id="labelSuggestionsPanel" hidden>
+          <h2>Suggested tracking</h2>
+          <p id="labelSuggestionsSummary" class="help"></p>
+          <p class="help">
+            USPS Click‑N‑Ship labels whose recipient couldn't be tied to exactly one order by buyer name (names come from
+            the TCGplayer order CSV; sale emails don't include them). Pick the order the label was for, or dismiss it.
+            Singles ship without tracking and aren't flagged.
+          </p>
+          <div id="labelSuggestionsList"></div>
         </section>
 
         <section class="panel">
@@ -98,6 +124,8 @@
                 <option value="tracked">Tracked</option>
                 <option value="missing">Missing tracking</option>
                 <option value="stamp">Stamp / no tracking</option>
+                <option value="singles">No tracking (singles)</option>
+                <option value="canceled">Canceled</option>
               </select>
             </div>
             <div class="row orders-date-row">
@@ -132,6 +160,7 @@
         <p id="status" class="status"></p>
       </main>
     </div>
+    <script type="module" src="/inventory-nav.js"></script>
     <script type="module" src="/inventory.js"></script>
   </body>
 </html>

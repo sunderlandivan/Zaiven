@@ -13,18 +13,18 @@ function toEmbed(urlOrId) {
   const s = String(urlOrId || "").trim();
   if (!s) return "";
   if (/^[A-Za-z0-9_-]{8,}$/.test(s)) {
-    return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(s)}?autoplay=1&enablejsapi=1&origin=${encodeURIComponent(location.origin)}`;
+    return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(s)}?autoplay=1&playsinline=1&rel=0&mute=1&enablejsapi=1&origin=${encodeURIComponent(location.origin)}`;
   }
   const m = s.match(/[?&]v=([A-Za-z0-9_-]{8,})/) || s.match(/youtu\.be\/([A-Za-z0-9_-]{8,})/);
   const id = m ? m[1] : "";
   return id
-    ? `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}?autoplay=1&enablejsapi=1&origin=${encodeURIComponent(location.origin)}`
+    ? `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}?autoplay=1&playsinline=1&rel=0&mute=1&enablejsapi=1&origin=${encodeURIComponent(location.origin)}`
     : "";
 }
 
 export const youtubeModule = {
   id: "youtube",
-  title: "Youtube videos",
+  title: "YouTube videos",
   mount(el) {
     el.innerHTML = `
       <div class="zee-yt" id="zee-yt-root"></div>
@@ -36,7 +36,7 @@ export const youtubeModule = {
     modal.innerHTML = `
       <div class="zee-yt-modal-card" id="zee-yt-modal-card">
         <div class="zee-yt-modal-head">
-          <div class="zee-sym" id="zee-yt-title">Youtube video</div>
+          <div class="zee-sym" id="zee-yt-title">YouTube video</div>
           <button type="button" class="zee-btn zee-btn-sm" id="zee-yt-close">Close</button>
         </div>
         <div class="zee-yt-player-wrap">
@@ -69,13 +69,48 @@ export const youtubeModule = {
       return { ok: true };
     };
 
+    const resumeVideo = () => {
+      const frame = /** @type {HTMLIFrameElement | null} */ (modal.querySelector("#zee-yt-frame"));
+      if (!frame?.contentWindow) return { ok: false, error: "video not open" };
+      frame.contentWindow.postMessage(
+        JSON.stringify({
+          event: "command",
+          func: "playVideo",
+          args: [],
+        }),
+        "*"
+      );
+      return { ok: true };
+    };
+
     const openVideo = (video, fromRect) => {
       const frame = /** @type {HTMLIFrameElement | null} */ (modal.querySelector("#zee-yt-frame"));
       const title = modal.querySelector("#zee-yt-title");
       const card = modal.querySelector("#zee-yt-modal-card");
       const embed = toEmbed(video?.url || video?.id);
       if (!embed || !frame) return;
-      if (title) title.textContent = String(video.title || "Youtube video");
+      if (title) title.textContent = String(video.title || "YouTube video");
+      frame.onload = () => {
+        // Belt-and-suspenders: explicitly issue play after iframe initializes.
+        try {
+          frame.contentWindow?.postMessage(
+            JSON.stringify({ event: "command", func: "playVideo", args: [] }),
+            "*"
+          );
+          window.setTimeout(() => {
+            try {
+              frame.contentWindow?.postMessage(
+                JSON.stringify({ event: "command", func: "unMute", args: [] }),
+                "*"
+              );
+            } catch {
+              // ignore
+            }
+          }, 450);
+        } catch {
+          // ignore
+        }
+      };
       frame.src = embed;
       const dx = fromRect ? fromRect.left + fromRect.width / 2 - window.innerWidth / 2 : 0;
       const dy = fromRect ? fromRect.top + fromRect.height / 2 - window.innerHeight / 2 : 0;
@@ -127,6 +162,7 @@ export const youtubeModule = {
       if (target === "all" || target === "youtube") closeModal();
     });
     const offPause = bus.on("youtube:pause", () => pauseVideo());
+    const offResume = bus.on("youtube:resume", () => resumeVideo());
     modal.querySelector("#zee-yt-close")?.addEventListener("click", closeModal);
     modal.addEventListener("click", (ev) => {
       if (ev.target === modal) closeModal();
@@ -140,6 +176,7 @@ export const youtubeModule = {
         offOpen();
         offClose();
         offPause();
+        offResume();
         window.clearInterval(id);
         modal.remove();
       },

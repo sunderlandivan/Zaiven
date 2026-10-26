@@ -20,7 +20,8 @@ export const newsModule = {
     const root = el.querySelector("#zee-news-root");
     const render = (feeds) => {
       if (!root) return;
-      const keys = /** @type {(keyof typeof LABELS)[]} */ (["nvidia", "star_citizen", "steam", "world"]);
+      /* 2×2 grid: TL world, TR nvidia, BL steam, BR Perris local */
+      const keys = /** @type {(keyof typeof LABELS)[]} */ (["world", "nvidia", "steam", "star_citizen"]);
       root.innerHTML = keys
         .map((k) => {
           const bundle = feeds[k];
@@ -33,14 +34,16 @@ export const newsModule = {
                 .slice(0, 5)
                 .map(
                   (a, i) =>
-                    `<li><a href="${escapeAttr(a.url)}" target="_blank" rel="noopener">${i + 1}. ${escapeHtml(
-                      a.title || ""
-                    )}</a><span class="zee-src">${escapeHtml(a.source || "")}</span></li>`
+                    `<li class="zee-news-row"><span class="zee-news-idx">${i + 1}.</span><div class="zee-news-row-body"><a class="zee-news-title" href="${escapeAttr(
+                      a.url
+                    )}" target="_blank" rel="noopener">${escapeHtml(a.title || "")}</a><span class="zee-src">${escapeHtml(
+                      a.source || ""
+                    )}</span></div></li>`
                 )
                 .join("")
             : "";
           const content = items || `<div class="zee-muted">No current headlines found for this topic.</div>`;
-          return `<section class="zee-news-col"><h4>${title}</h4>${items ? `<ol class="zee-news-list">${items}</ol>` : content}</section>`;
+          return `<section class="zee-news-col"><h4>${title}</h4>${items ? `<ul class="zee-news-list">${items}</ul>` : content}</section>`;
         })
         .join("");
     };

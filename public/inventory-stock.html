@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Inventory — TCG Inventory</title>
+    <link rel="icon" type="image/png" href="/brand/logo.png" />
+    <link rel="stylesheet" href="/inventory.css" />
+    <script src="/portal-ui.js"></script>
+  </head>
+  <body data-page="stock">
+    <div class="app-shell">
+      <aside class="nav-pane">
+        <div class="nav-brand">The PreEminent Store - Portal</div>
+        <nav class="nav-links">
+          <div class="nav-group">Daily</div>
+          <a class="nav-link" href="/inventory-orders.html">Order Tracking</a>
+          <a class="nav-link active" href="/inventory-stock.html">Inventory</a>
+          <div class="nav-group">Business</div>
+          <a class="nav-link" href="/inventory-sheet-sync.html">Sheet Sync</a>
+          <a class="nav-link" href="/inventory-analytics.html">Selling Analytics</a>
+          <a class="nav-link" href="/inventory-dashboard-analytics.html">Dashboard Analytics</a>
+          <a class="nav-link" href="/inventory-marketing.html">Marketing</a>
+          <a class="nav-link" href="/inventory-import.html">Import and Pricing</a>
+          <a class="nav-link" href="/inventory-treasure-hunt.html">Treasure Hunt</a>
+          <div class="nav-group">Owner</div>
+          <a class="nav-link" href="/inventory-tax-prep.html">Tax Prep</a>
+          <a class="nav-link" href="/inventory-loan.html">Loan</a>
+        </nav>
+      </aside>
+      <main class="nav-content">
+        <header class="content-header tax-prep-header">
+          <div class="page-heading">
+            <h1>Inventory</h1>
+            <p class="page-subtitle">What is on hand right now, with cost, retail value and profit for each item.</p>
+          </div>
+          <div class="row tax-prep-toolbar">
+            <input id="stockSearch" type="search" class="orders-search" placeholder="Search item…" />
+            <button id="stockReloadBtn" type="button" class="subtle">Reload</button>
+            <button id="stockAutoMatchBtn" type="button" class="subtle">Re-run auto-match</button>
+          </div>
+        </header>
+
+        <p class="help">
+          Current on-hand stock from your 2025 + 2026 inventory sheets (purchase year tagged per row). Sheets stay the
+          master for qty. <strong>Sold since import</strong> only counts Gmail matches after this import.
+          Games tracked: Magic, Pokemon, Flesh and Blood, Weiss Schwarz, Riftbound.
+        </p>
+
+        <section class="panel">
+          <h2>Summary</h2>
+          <div id="stockKpis" class="dashboard-kpi-grid"></div>
+          <p id="stockImportNote" class="help totals-explainer"></p>
+        </section>
+
+        <section class="panel" id="needsMatchPanel">
+          <div class="tax-section-head">
+            <h2>Needs match</h2>
+          </div>
+          <p class="help">
+            Sales where Gmail found a product name but it didn’t confidently match an inventory row. Pick the SKU and confirm.
+          </p>
+          <div class="table-wrap tax-table-wrap">
+            <table class="tax-sheet" id="needsMatchTable">
+              <thead>
+                <tr>
+                  <th>Sale date</th>
+                  <th>Order #</th>
+                  <th>Parsed product</th>
+                  <th>Qty</th>
+                  <th>Match to inventory</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <p id="needsMatchEmpty" class="help" hidden>No unmatched sales — all parsed lines are matched or ignored.</p>
+        </section>
+
+        <section class="panel">
+          <div class="tax-section-head">
+            <h2>Stock sheet</h2>
+            <div class="row">
+              <select id="stockStatusFilter" class="orders-status-filter">
+                <option value="">All statuses</option>
+                <option value="In stock">In stock</option>
+                <option value="Sold since import">Sold since import</option>
+                <option value="Sold out">Sold out</option>
+                <option value="Listed">Listed</option>
+              </select>
+            </div>
+          </div>
+          <div class="table-wrap stock-table-wrap">
+            <table class="tax-sheet stock-sheet" id="stockTable">
+              <thead>
+                <tr>
+                  <th><button type="button" class="th-sort" data-sort="productName">Item ID</button></th>
+                  <th><button type="button" class="th-sort" data-sort="itemType">Type</button></th>
+                  <th><button type="button" class="th-sort" data-sort="purchaseYear">Year</button></th>
+                  <th><button type="button" class="th-sort" data-sort="game">Game</button></th>
+                  <th><button type="button" class="th-sort" data-sort="qtyExcel">Qty (Excel)</button></th>
+                  <th><button type="button" class="th-sort" data-sort="soldSinceImport">Sold since import</button></th>
+                  <th><button type="button" class="th-sort" data-sort="available">Available</button></th>
+                  <th><button type="button" class="th-sort" data-sort="unitCost">Cost w/ Tax</button></th>
+                  <th><button type="button" class="th-sort" data-sort="totalInv">Total Inv $</button></th>
+                  <th><button type="button" class="th-sort" data-sort="lastRetail">Last Retail</button></th>
+                  <th><button type="button" class="th-sort" data-sort="totalRetail">Total Retail</button></th>
+                  <th><button type="button" class="th-sort" data-sort="feePerUnit">Fees / unit</button></th>
+                  <th><button type="button" class="th-sort" data-sort="profitPerUnit">Profit / unit</button></th>
+                  <th><button type="button" class="th-sort" data-sort="profitTotal">Profit Total</button></th>
+                  <th><button type="button" class="th-sort" data-sort="marginPct">Margin %</button></th>
+                  <th><button type="button" class="th-sort" data-sort="status">Status</button></th>
+                  <th>TCG Link</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+
+        <p id="stockStatus" class="status"></p>
+      </main>
+    </div>
+    <script type="module" src="/inventory-nav.js"></script>
+    <script src="/inventory-stock.js" defer></script>
+  </body>
+</html>

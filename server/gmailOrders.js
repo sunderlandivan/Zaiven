@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
 import crypto from "crypto";
 import axios from "axios";
 
@@ -9,14 +10,26 @@ import {
   isLikelyStampShippingCost,
 } from "./inventoryAgent.js";
 
-const DATA_DIR = path.resolve("data");
+const DATA_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "data");
 const ORDERS_DB_PATH = path.join(DATA_DIR, "orders-db.json");
 const GMAIL_SYNC_SETTINGS_PATH = path.join(DATA_DIR, "gmail-sync-settings.json");
+// Order numbers the owner deleted as fake (e.g. our own TCGplayer purchases misread as sales); never re-created by sync.
+const IGNORED_ORDERS_PATH = path.join(DATA_DIR, "orders-ignored.json");
+
+function readIgnoredOrderNumbers() {
+  try {
+    return new Set((JSON.parse(fs.readFileSync(IGNORED_ORDERS_PATH, "utf8")).orderNumbers || []).map((n) => String(n).toUpperCase()));
+  } catch {
+    return new Set();
+  }
+}
 
 const GMAIL_AUTH_BASE_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GMAIL_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GMAIL_API_BASE_URL = "https://gmail.googleapis.com/gmail/v1/users/me";
-const GMAIL_SCOPE = "https://www.googleapis.com/auth/gmail.readonly";
+const GMAIL_READ_SCOPE = "https://www.googleapis.com/auth/gmail.readonly";
+const SHEETS_SCOPE = "https://www.googleapis.com/auth/spreadsheets";
+const GMAIL_SCOPE = `${GMAIL_READ_SCOPE} ${SHEETS_SCOPE}`;
 
 const TCGPLAYER_QUERY =
   'from:(@tcgplayer.com) subject:("TCGplayer" OR "order" OR "tracking")';
@@ -103,12 +116,6 @@ function parseCurrency(v) {
   if (!match) return 0;
   const n = Number(match[1].replace(/,/g, ""));
   return Number.isFinite(n) ? n : 0;
-}
-
-/** Same calendar month+day in UTC (ignores year) — helps CSV year typos vs USPS “Placed on”. */
-function calendarMdEqualIgnoringYear(a, b) {
-  if (!a || !b || Number.isNaN(a.getTime()) || Number.isNaN(b.getTime())) return false;
-  return a.getUTCMonth() === b.getUTCMonth() && a.getUTCDate() === b.getUTCDate();
 }
 
 function decodeB64Url(s) {
@@ -251,6 +258,66 @@ function extractRecipientBlock(text) {
   };
 }
 
+function cleanSoldProductDescription(raw) {
+  return String(raw || "")
+    .replace(/\/\s*Unopened\b/gi, "")
+    .replace(/\s+/g, " ")
+    .replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9]+$/g, "")
+    .trim();
+}
+
+function extractSoldLineItems(subject, bodyText) {
+  const lineItems = [];
+  const byDesc = new Map();
+  const pushLine = (description, quantity) => {
+    const desc = cleanSoldProductDescription(description);
+    const qty = Math.max(1, Math.round(Number(quantity) || 1));
+    if (!desc || desc.length < 3) return;
+    // Drop multi-item blurbs like "Storm ... and 1 more items"
+    if (/\band\s+\d+\s+more\s+items?\b/i.test(desc)) return;
+    const key = desc.toLowerCase();
+    const prev = byDesc.get(key);
+    if (!prev || qty > prev.quantity) byDesc.set(key, { description: desc, quantity: qty });
+  };
+
+  const subjectProduct = (String(subject || "").match(/items?\s+of\s+(.+?)\s+have\s+sold/i) || [])[1];
+  const body = String(bodyText || "");
+  const detailsIdx = body.search(/order\s+details/i);
+  const detailsChunk = detailsIdx >= 0 ? body.slice(detailsIdx, detailsIdx + 1500) : body;
+
+  // Prefer explicit "N Product/Unopened" lines inside order details.
+  const detailRe =
+    /\b(\d{1,3})\s+([A-Za-z0-9][\w:'\-.#,&() ]{2,100}?)(?:\s*\/\s*Unopened|\s+Remember\s+to\s+ship|\s+Confirm\s+Shipment)/gi;
+  let m;
+  while ((m = detailRe.exec(detailsChunk)) !== null) {
+    pushLine(m[2], m[1]);
+  }
+
+  // Multi-item orders list "1 Card A/Near Mint 2 Card B/Near Mint Foil" back to back; card names may contain "//".
+  const itemsChunk = detailsChunk.split(/Remember\s+to\s+ship|Confirm\s+Shipment/i)[0].replace(/^[\s\S]*?See\s+all\s*(?:&gt;|>)\s*/i, "");
+  const conditionRe =
+    /(?:^|\s)(\d{1,3})\s+(.+?)\s*\/\s*(?:Unopened|Near Mint|Lightly Played|Moderately Played|Heavily Played|Damaged)[A-Za-z ]*?(?=\s+\d{1,3}\s+\S|\s*$)/g;
+  const multi = [];
+  while ((m = conditionRe.exec(itemsChunk)) !== null) multi.push([m[2], m[1]]);
+  if (multi.length > byDesc.size) {
+    byDesc.clear();
+    for (const [desc, qty] of multi) pushLine(desc, qty);
+  }
+
+  if (!byDesc.size && subjectProduct) {
+    // Fallback: subject product + first nearby qty in details, else 1
+    const qtyMatch = detailsChunk.match(/\b(\d{1,3})\s+[A-Za-z0-9]/);
+    pushLine(subjectProduct, qtyMatch ? qtyMatch[1] : 1);
+  } else if (subjectProduct && byDesc.size) {
+    // If subject product wasn't captured from details, add it at qty 1 only when absent
+    const key = cleanSoldProductDescription(subjectProduct).toLowerCase();
+    if (key && !byDesc.has(key)) pushLine(subjectProduct, 1);
+  }
+
+  for (const li of byDesc.values()) lineItems.push(li);
+  return lineItems;
+}
+
 function parseTcgplayerEmail(message) {
   const headers = message.payload?.headers || [];
   const subject = getHeader(headers, "Subject");
@@ -264,7 +331,9 @@ function parseTcgplayerEmail(message) {
     "shipped - in transit",
     "completed - paid",
     "you have sold",
+    "have sold",
     "order details",
+    "payment for this order has been received and is being held",
   ];
   const buyerSignals = [
     "your order has been processed",
@@ -282,12 +351,22 @@ function parseTcgplayerEmail(message) {
   if (hasBuyerSignal && !hasSellerSignal) return null;
   if (!hasSellerSignal) return null;
 
-  const totalText = (bodyText.match(/order\s*total\s*[:\s]\$?\s*([0-9,]+(?:\.[0-9]{1,2})?)/i) || [])[1];
+  const totalText =
+    (bodyText.match(/order\s*total\s*:?\s*\$?\s*([0-9,]+(?:\.[0-9]{1,2})?)/i) || [])[1] ||
+    (bodyText.match(/grand\s*total\s*:?\s*\$?\s*([0-9,]+(?:\.[0-9]{1,2})?)/i) || [])[1];
   const orderAmount = parseCurrency(totalText);
   const taxMatch =
     bodyText.match(/(?:^|[\n\r])\s*(?:sales\s+)?tax\s*[:]\s*\$?\s*([0-9,]+(?:\.[0-9]{1,2})?)/im) ||
     bodyText.match(/\btax\s+amount\s*[:]\s*\$?\s*([0-9,]+(?:\.[0-9]{1,2})?)/im);
   const buyerTax = taxMatch ? parseCurrency(taxMatch[1]) : 0;
+  const lineItems = extractSoldLineItems(subject, bodyText);
+  const primaryProduct = lineItems[0]?.description || "";
+  const totalQty = lineItems.reduce((a, li) => a + Number(li.quantity || 0), 0);
+  const itemConditionHint = /\/\s*Unopened\b/i.test(bodyText)
+    ? "sealed"
+    : /\/\s*(?:Near Mint|Lightly Played|Moderately Played|Heavily Played|Damaged)\b/i.test(bodyText)
+      ? "singles"
+      : "";
 
   return {
     type: "tcg_order",
@@ -295,6 +374,10 @@ function parseTcgplayerEmail(message) {
     orderAmount,
     salePrice: orderAmount,
     ...(buyerTax > 0 ? { buyerTax } : {}),
+    ...(itemConditionHint ? { itemConditionHint } : {}),
+    productName: primaryProduct || null,
+    quantity: totalQty > 0 ? totalQty : 1,
+    lineItems,
     purchaseDate: parseOrderDateForStorage(headerDate),
     isSellerContext: true,
     sourceMessageId: String(message.id || ""),
@@ -372,35 +455,6 @@ function parseUspsEmail(message) {
   };
 }
 
-function normalizePersonName(value) {
-  return String(value || "")
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, " ")
-    .replace(/\b[a-z]\b/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function nameTokens(value) {
-  return normalizePersonName(value)
-    .split(" ")
-    .filter((t) => t && t.length >= 2);
-}
-
-function nameSimilarity(a, b) {
-  const at = nameTokens(a);
-  const bt = nameTokens(b);
-  if (!at.length || !bt.length) return 0;
-  const aSet = new Set(at);
-  const bSet = new Set(bt);
-  let common = 0;
-  for (const token of aSet) {
-    if (bSet.has(token)) common += 1;
-  }
-  const denom = Math.max(aSet.size, bSet.size, 1);
-  return common / denom;
-}
-
 function getGmailConfigFromEnv() {
   const clientId = String(process.env.GMAIL_CLIENT_ID || "").trim();
   const clientSecret = String(process.env.GMAIL_CLIENT_SECRET || "").trim();
@@ -458,7 +512,15 @@ async function getValidAccessToken() {
   if (!oauth.refreshToken) {
     throw new Error("Gmail is not connected. Click Connect Gmail first.");
   }
-  const refreshed = await refreshAccessToken(oauth.refreshToken);
+  let refreshed;
+  try {
+    refreshed = await refreshAccessToken(oauth.refreshToken);
+  } catch (e) {
+    if (e.response?.data?.error === "invalid_grant") {
+      throw new Error("Google login expired. Click Connect Google (Sheet Sync page) to sign in again.");
+    }
+    throw e;
+  }
   settings.oauth = {
     ...oauth,
     accessToken: String(refreshed.access_token || ""),
@@ -508,6 +570,59 @@ async function gmailGetMessage(accessToken, messageId) {
   return res.data || null;
 }
 
+function mergeLineItems(existing, incoming) {
+  const a = Array.isArray(existing) ? existing : [];
+  const b = Array.isArray(incoming) ? incoming : [];
+  if (!b.length) return a;
+  if (!a.length) return b;
+  const byDesc = new Map();
+  for (const li of [...a, ...b]) {
+    const desc = String(li?.description || "").trim();
+    if (!desc) continue;
+    const qty = Math.max(1, Number(li.quantity || 1));
+    const prev = byDesc.get(desc.toLowerCase());
+    if (!prev || qty > prev.quantity) byDesc.set(desc.toLowerCase(), { description: desc, quantity: qty });
+  }
+  return [...byDesc.values()];
+}
+
+function buildOrderFromGmailRecord(rec) {
+  const key = normalizeOrderNumber(rec.orderNumber);
+  if (!key) return null;
+  const amount = Number(rec.orderAmount || rec.salePrice || 0);
+  const lineItems = mergeLineItems([], rec.lineItems);
+  const productName =
+    String(rec.productName || "").trim() ||
+    lineItems[0]?.description ||
+    `TCGplayer Order ${key}`;
+  const quantity = Math.max(
+    1,
+    Number(rec.quantity || 0) || lineItems.reduce((a, li) => a + Number(li.quantity || 0), 0) || 1
+  );
+  return {
+    id: `gmail_${key}`,
+    orderNumber: key,
+    buyerName: rec.buyerName || rec.recipientName || null,
+    productName,
+    quantity,
+    lineItems,
+    salePrice: amount,
+    orderAmount: amount,
+    platform: "tcgplayer",
+    channel: "TCGplayer",
+    feeAmount: 0,
+    shippingCost: Number(rec.labelCost || 0),
+    trackingNumber: String(rec.trackingNumber || "").trim(),
+    purchaseDate: parseOrderDateForStorage(rec.purchaseDate),
+    status: rec.type === "tcg_tracking_update" ? "Shipped" : "Open",
+    createdAt: new Date().toISOString(),
+    lastEmailSyncAt: new Date().toISOString(),
+    source: "gmail",
+    ...(Number(rec.buyerTax) > 0 ? { buyerTax: Number(rec.buyerTax) } : {}),
+    ...(rec.itemConditionHint ? { itemConditionHint: rec.itemConditionHint } : {}),
+  };
+}
+
 function upsertParsedOrdersIntoDb(records, { dryRun = false } = {}) {
   const db = readJson(ORDERS_DB_PATH);
   const existingOrders = Array.isArray(db.orders) ? db.orders : [];
@@ -519,122 +634,43 @@ function upsertParsedOrdersIntoDb(records, { dryRun = false } = {}) {
 
   let inserted = 0;
   let updated = 0;
-  const uspsMatchDebug = [];
+  const ignored = readIgnoredOrderNumbers();
   for (const rec of records) {
     const key = normalizeOrderNumber(rec.orderNumber);
-    if (!key) {
-      if (rec.type === "usps_label" && rec.trackingNumber) {
-        const recName = normalizePersonName(rec.recipientName);
-        const recDate = new Date(String(rec.purchaseDate || ""));
-        let best = null;
-        let bestScore = 0;
-        let strongCandidateCount = 0;
-        const topCandidates = [];
-        for (const o of existingOrders) {
-          if (String(o.trackingNumber || "").trim()) continue;
-          if (o.noTrackingNeeded || isLikelyStampShippingCost(o.shippingCost)) continue;
-          const buyer = normalizePersonName(o.buyerName || "");
-          let score = 0;
-          let sim = 0;
-          if (recName && buyer) {
-            if (buyer === recName) score += 3;
-            if (buyer.includes(recName) || recName.includes(buyer)) score += 1.2;
-            sim = nameSimilarity(buyer, recName);
-            score += sim * 2;
-          }
-
-          const oDate = new Date(String(o.purchaseDate || ""));
-          let dayDiff = Number.POSITIVE_INFINITY;
-          if (!Number.isNaN(recDate.getTime()) && !Number.isNaN(oDate.getTime())) {
-            dayDiff = Math.abs(recDate.getTime() - oDate.getTime()) / (1000 * 60 * 60 * 24);
-            if (dayDiff <= 7) score += 0.9;
-            else if (dayDiff <= 30) score += 0.4;
-          }
-
-          if (
-            recName &&
-            buyer &&
-            buyer === recName &&
-            Number(rec.labelCost || 0) > 0 &&
-            Number(o.shippingCost || 0) > 0 &&
-            calendarMdEqualIgnoringYear(recDate, oDate)
-          ) {
-            const sd = Math.abs(Number(rec.labelCost || 0) - Number(o.shippingCost || 0));
-            if (sd <= 2) score += 1.15;
-          }
-
-          const labelCost = Number(rec.labelCost || 0);
-          const shipCost = Number(o.shippingCost || 0);
-          let shipDiff = Number.POSITIVE_INFINITY;
-          if (labelCost > 0 && shipCost > 0) {
-            shipDiff = Math.abs(labelCost - shipCost);
-            if (shipDiff <= 0.5) score += 1.1;
-            else if (shipDiff <= 2) score += 0.6;
-          }
-
-          // TCG order date in CSV can disagree with USPS label date (typo / export quirk) while name + postage match.
-          if (
-            recName &&
-            buyer &&
-            buyer === recName &&
-            labelCost > 0 &&
-            shipCost > 0 &&
-            shipDiff <= 1.5 &&
-            Number.isFinite(dayDiff) &&
-            dayDiff > 45
-          ) {
-            score += 0.85;
-          }
-
-          // Fallback signal when recipient name cannot be reliably parsed from USPS HTML.
-          if (!recName && shipDiff <= 0.6 && dayDiff <= 3) score += 1.0;
-          if (/shipped|completed/i.test(String(o.status || ""))) score += 0.2;
-          if (score >= 1.65) strongCandidateCount += 1;
-          topCandidates.push({
-            orderNumber: o.orderNumber || "",
-            buyerName: o.buyerName || "",
-            shippingCost: Number(o.shippingCost || 0),
-            score: Number(score.toFixed(3)),
-          });
-          if (score > bestScore) {
-            bestScore = score;
-            best = o;
-          }
-        }
-        topCandidates.sort((a, b) => b.score - a.score);
-        const secondScore = topCandidates.length > 1 ? Number(topCandidates[1].score || 0) : 0;
-        const scoreGap = Number(bestScore) - secondScore;
-        const acceptMatch =
-          Boolean(best) &&
-          bestScore >= 1.65 &&
-          (strongCandidateCount <= 3 ||
-            (bestScore >= 2.35 && scoreGap >= 0.3 && strongCandidateCount <= 12));
-        uspsMatchDebug.push({
-          recipientName: rec.recipientName || "",
-          trackingNumber: rec.trackingNumber || "",
-          purchaseDate: rec.purchaseDate || "",
-          labelCost: Number(rec.labelCost || 0),
-          bestScore: Number(bestScore.toFixed(3)),
-          secondScore: Number(secondScore.toFixed(3)),
-          scoreGap: Number(scoreGap.toFixed(3)),
-          strongCandidateCount,
-          selectedOrderNumber: best && acceptMatch ? best.orderNumber || "" : "",
-          selectedBuyerName: best && acceptMatch ? best.buyerName || "" : "",
-          topCandidates: topCandidates.slice(0, 3),
-        });
-        if (acceptMatch) {
-          best.trackingNumber = rec.trackingNumber;
-          best.lastEmailSyncAt = new Date().toISOString();
-          updated += 1;
+    if (!key || ignored.has(key.toUpperCase())) continue;
+    const current = byOrder.get(key);
+    if (!current) {
+      const canCreateFromEmail =
+        rec.type === "tcg_order" ||
+        rec.type === "tcg_tracking_update" ||
+        (rec.type === "usps_label" && isLikelyTcgplayerOrderNumber(key));
+      if (canCreateFromEmail) {
+        const created = buildOrderFromGmailRecord(rec);
+        if (created) {
+          existingOrders.push(created);
+          byOrder.set(key, created);
+          inserted += 1;
         }
       }
       continue;
     }
-    const current = byOrder.get(key);
-    // Gmail sync is enrichment-only: do not create brand-new rows from email parsing.
-    if (!current) continue;
     const base = current;
-    const stampLike = Boolean(base.noTrackingNeeded) || isLikelyStampShippingCost(base.shippingCost);
+    const stampLike =
+      !base.trackingSource &&
+      (Boolean(base.noTrackingNeeded) || isLikelyStampShippingCost(base.shippingCost));
+    const lineItems = mergeLineItems(base.lineItems, rec.lineItems);
+    const nextProductName =
+      String(rec.productName || "").trim() ||
+      lineItems[0]?.description ||
+      (/^tcgplayer order /i.test(String(base.productName || "")) ? "" : base.productName) ||
+      `TCGplayer Order ${key}`;
+    const nextQty = Math.max(
+      1,
+      Number(rec.quantity || 0) ||
+        lineItems.reduce((a, li) => a + Number(li.quantity || 0), 0) ||
+        Number(base.quantity || 1) ||
+        1
+    );
     const merged = {
       ...base,
       orderNumber: key,
@@ -642,10 +678,15 @@ function upsertParsedOrdersIntoDb(records, { dryRun = false } = {}) {
       orderAmount: rec.orderAmount > 0 ? rec.orderAmount : Number(base.orderAmount || 0),
       buyerTax:
         rec.buyerTax > 0 ? rec.buyerTax : Number(base.buyerTax || 0) > 0 ? Number(base.buyerTax) : base.buyerTax,
+      buyerName: rec.buyerName || rec.recipientName || base.buyerName || null,
+      productName: nextProductName,
+      quantity: nextQty,
+      lineItems,
       trackingNumber: stampLike ? "" : rec.trackingNumber || base.trackingNumber || "",
       purchaseDate: rec.purchaseDate || base.purchaseDate,
       recipientName: rec.recipientName || base.recipientName || null,
       recipientAddress: rec.recipientAddress || base.recipientAddress || null,
+      itemConditionHint: rec.itemConditionHint || base.itemConditionHint || undefined,
       lastEmailSyncAt: new Date().toISOString(),
     };
     if (current) {
@@ -664,22 +705,40 @@ function upsertParsedOrdersIntoDb(records, { dryRun = false } = {}) {
     inserted,
     updated: updated + stampHeuristicUpdated,
     totalOrders: db.orders.length,
-    uspsMatchDebug,
     stampHeuristicUpdated,
   };
+}
+
+export {
+  getValidAccessToken,
+  gmailCollectMessages,
+  gmailGetMessage,
+  getHeader,
+  extractBodyFromPayload,
+  htmlToText,
+  parseCurrency,
+};
+
+export function hasSheetsScope() {
+  const scope = String(getSavedSettings().oauth?.scope || "");
+  return scope.includes(SHEETS_SCOPE);
 }
 
 export function getGmailSyncStatus() {
   const settings = getSavedSettings();
   const oauth = settings.oauth || {};
   const sync = settings.sync || {};
+  const ordersDb = readJson(ORDERS_DB_PATH);
+  const ordersInDatabase = Array.isArray(ordersDb.orders) ? ordersDb.orders.length : 0;
   return {
     connected: Boolean(oauth.refreshToken),
+    sheetsAccess: String(oauth.scope || "").includes(SHEETS_SCOPE),
     scope: oauth.scope || null,
     expiresAt: oauth.expiresAt || null,
     lastSyncAt: sync.lastSyncAt || null,
     lastSyncSummary: sync.summary || null,
     earliestAfter: getGmailSyncEarliestAfterDate() || null,
+    ordersInDatabase,
   };
 }
 
@@ -791,29 +850,42 @@ export async function syncOrdersFromGmail({ maxPerQuery = 50, maxPages = 5, dryR
   }
 
   const collapsed = new Map();
-  const uspsNoKeyRecords = [];
   for (const rec of parsedRecords) {
     const key = normalizeOrderNumber(rec.orderNumber);
-    if (!key) {
-      if (rec.type === "usps_label") {
-        uspsNoKeyRecords.push(rec);
-      }
-      continue;
-    }
+    if (!key) continue;
     const existing = collapsed.get(key);
     collapsed.set(key, {
       ...(existing || {}),
       ...rec,
       orderNumber: key,
+      lineItems: mergeLineItems(existing?.lineItems, rec.lineItems),
+      productName: rec.productName || existing?.productName || null,
+      quantity: Math.max(Number(existing?.quantity || 0), Number(rec.quantity || 0), 1),
       hasTcgOrderData:
         Boolean(existing?.hasTcgOrderData) ||
         (rec.type === "tcg_order" && rec.isSellerContext === true),
       hasUspsLabelData: Boolean(existing?.hasUspsLabelData) || rec.type === "usps_label",
     });
   }
-  const mergedRecords = [...Array.from(collapsed.values()), ...uspsNoKeyRecords];
+  const mergedRecords = Array.from(collapsed.values());
 
   const dbResult = upsertParsedOrdersIntoDb(mergedRecords, { dryRun: Boolean(dryRun) });
+  let salesMatch = null;
+  let labelMatch = null;
+  if (!dryRun) {
+    try {
+      const { syncShippingLabels } = await import("./shippingLabels.js");
+      labelMatch = await syncShippingLabels({ accessToken, full: Boolean(fullRescan) });
+    } catch (e) {
+      labelMatch = { error: String(e?.message || e) };
+    }
+    try {
+      const { autoMatchSalesToInventory } = await import("./inventorySales.js");
+      salesMatch = autoMatchSalesToInventory();
+    } catch {
+      salesMatch = null;
+    }
+  }
   const summary = {
     at: new Date().toISOString(),
     earliestAfter: getGmailSyncEarliestAfterDate() || null,
@@ -826,7 +898,8 @@ export async function syncOrdersFromGmail({ maxPerQuery = 50, maxPages = 5, dryR
     inserted: dbResult.inserted,
     updated: dbResult.updated,
     totalOrders: dbResult.totalOrders,
-    uspsMatchDebug: Array.isArray(dbResult.uspsMatchDebug) ? dbResult.uspsMatchDebug.slice(0, 30) : [],
+    labelMatch,
+    salesMatch,
     fullRescan: Boolean(fullRescan),
     dryRun: Boolean(dryRun),
   };

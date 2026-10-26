@@ -239,12 +239,11 @@ export const stocksModule = {
                 : ` <span class="${row.changePct >= 0 ? "zee-up" : "zee-down"}">${row.changePct >= 0 ? "+" : ""}${row.changePct.toFixed(2)}%</span>`;
             return `
               <div class="zee-stock-row" data-sym="${item.fetch}">
-                <div>
+                <button type="button" class="zee-stock-symblock" data-spot="${item.fetch}" title="Open spotlight">
                   <div class="zee-sym">${item.label}</div>
                   <div class="zee-price">${row.current != null ? row.current.toFixed(2) : "-"}${ch}</div>
-                </div>
-                <button class="zee-btn zee-btn-sm" data-spot="${item.fetch}" type="button">Spotlight</button>
-                <canvas class="zee-spark" width="140" height="44" data-sym="${item.fetch}"></canvas>
+                </button>
+                <canvas class="zee-spark" width="88" height="36" data-sym="${item.fetch}"></canvas>
               </div>`;
           })
           .join("");
@@ -254,7 +253,7 @@ export const stocksModule = {
           const cv = root?.querySelector(`canvas[data-sym="${item.fetch}"]`);
           if (cv && row?.sparkline) drawSparkline(/** @type {HTMLCanvasElement} */ (cv), row.sparkline);
         }
-        root?.querySelectorAll("[data-spot]").forEach((btn) => {
+        root?.querySelectorAll(".zee-stock-symblock[data-spot]").forEach((btn) => {
           btn.addEventListener("click", () => showSpotlight(String(btn.getAttribute("data-spot") || "NVDA")));
         });
       } catch (e) {

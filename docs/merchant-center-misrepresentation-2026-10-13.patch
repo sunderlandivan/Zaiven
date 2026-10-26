@@ -1,0 +1,390 @@
+diff --git a/a/cloudflare/functions/feed.xml.js b/b/cloudflare/functions/feed.xml.js
+index f63e472..0b67ffd 100644
+--- a/a/cloudflare/functions/feed.xml.js
++++ b/b/cloudflare/functions/feed.xml.js
+@@ -1,21 +1,25 @@
+-import { BRANDS, SITE, describe, esc, googleCondition, imageUrl, loadCatalog, productUrl, shipFor } from "../lib/catalog.js";
++import { SITE, brandFor, describe, esc, googleCondition, imageUrl, loadCatalog, productUrl, shipFor } from "../lib/catalog.js";
++
++const feedTitle = (i) => (i.deck ? `${i.title || i.name} - Custom Built Deck (Unofficial)` : i.title || i.name).slice(0, 150);
+ 
+ /** Google Merchant Center product feed (free listings). Add https://preeminentstore.com/feed.xml as a scheduled-fetch feed. */
+ export async function onRequestGet({ env, request }) {
+   const catalog = await loadCatalog(env, request);
+   const shipping = catalog.shipping || {};
+-  const items = (catalog.items || []).map((i) => {
++  // Without a real photo the store logo would stand in as the product image, which Google treats as misleading.
++  const items = (catalog.items || []).filter((i) => i.image).map((i) => {
+     const ship = shipFor(i, shipping);
++    const brand = brandFor(i);
+     return `    <item>
+       <g:id>${esc(i.id)}</g:id>
+-      <g:title>${esc((i.title || i.name).slice(0, 150))}</g:title>
++      <g:title>${esc(feedTitle(i))}</g:title>
+       <g:description>${esc(`${i.title || i.name}. ${describe(i, shipping)}.`)}</g:description>
+       <g:link>${esc(productUrl(i))}?ref=google</g:link>
+       <g:image_link>${esc(imageUrl(i))}</g:image_link>
+       <g:availability>in_stock</g:availability>
+       <g:price>${Number(i.price).toFixed(2)} USD</g:price>
+       <g:condition>${googleCondition(i)}</g:condition>
+-      ${BRANDS[i.game] ? `<g:brand>${esc(BRANDS[i.game])}</g:brand>` : ""}
++      ${brand ? `<g:brand>${esc(brand)}</g:brand>` : ""}
+       <g:identifier_exists>no</g:identifier_exists>
+       <g:product_type>${esc(["Trading Cards", i.type].filter(Boolean).join(" > "))}</g:product_type>
+       ${ship != null ? `<g:shipping><g:country>US</g:country><g:price>${Number(ship).toFixed(2)} USD</g:price></g:shipping>` : ""}
+@@ -26,7 +30,7 @@ export async function onRequestGet({ env, request }) {
+   <channel>
+     <title>The PreEminent Store</title>
+     <link>${SITE}/</link>
+-    <description>Sealed trading card products and singles</description>
++    <description>Sealed trading card products, singles and custom-built decks</description>
+ ${items.join("\n")}
+   </channel>
+ </rss>`;
+diff --git a/a/cloudflare/functions/p/[id].js b/b/cloudflare/functions/p/[id].js
+index b90db5a..fc66805 100644
+--- a/a/cloudflare/functions/p/[id].js
++++ b/b/cloudflare/functions/p/[id].js
+@@ -1,4 +1,4 @@
+-import { BRANDS, describe, esc, googleCondition, imageUrl, loadCatalog, productUrl } from "../../lib/catalog.js";
++import { SITE, STORE_NAME, brandFor, describe, esc, googleCondition, imageUrl, loadCatalog, productUrl, shipFor } from "../../lib/catalog.js";
+ 
+ /**
+  * Product pages are the store page with the product's own title, preview card (Open Graph) and
+@@ -15,6 +15,8 @@ export async function onRequestGet({ params, env, request }) {
+   const desc = describe(item, catalog.shipping);
+   const url = productUrl(item);
+   const img = imageUrl(item);
++  const brand = brandFor(item);
++  const ship = shipFor(item, catalog.shipping || {});
+   const ld = {
+     "@context": "https://schema.org",
+     "@type": "Product",
+@@ -22,7 +24,7 @@ export async function onRequestGet({ params, env, request }) {
+     image: img,
+     description: desc,
+     sku: item.id,
+-    ...(BRANDS[item.game] ? { brand: { "@type": "Brand", name: BRANDS[item.game] } } : {}),
++    ...(brand ? { brand: { "@type": "Brand", name: brand } } : {}),
+     offers: {
+       "@type": "Offer",
+       url,
+@@ -30,6 +32,16 @@ export async function onRequestGet({ params, env, request }) {
+       priceCurrency: "USD",
+       availability: "https://schema.org/InStock",
+       itemCondition: googleCondition(item) === "new" ? "https://schema.org/NewCondition" : "https://schema.org/UsedCondition",
++      seller: { "@type": "Organization", name: STORE_NAME, url: `${SITE}/` },
++      ...(ship != null
++        ? {
++            shippingDetails: {
++              "@type": "OfferShippingDetails",
++              shippingRate: { "@type": "MonetaryAmount", value: Number(ship).toFixed(2), currency: "USD" },
++              shippingDestination: { "@type": "DefinedRegion", addressCountry: "US" },
++            },
++          }
++        : {}),
+       hasMerchantReturnPolicy: {
+         "@type": "MerchantReturnPolicy",
+         applicableCountry: "US",
+diff --git a/a/cloudflare/lib/catalog.js b/b/cloudflare/lib/catalog.js
+index 430cc93..8d1b336 100644
+--- a/a/cloudflare/lib/catalog.js
++++ b/b/cloudflare/lib/catalog.js
+@@ -28,11 +28,20 @@ export const imageUrl = (item) => (item.image ? `${SITE}/${item.image}` : `${SIT
+ export const shipFor = (item, shipping = {}) =>
+   item.ship === "single" ? shipping.single : item.ship === "deck" && item.shipCost > 0 ? item.shipCost : shipping.standard;
+ 
++export const STORE_NAME = "The PreEminent Store";
++
++/** Custom decks are our own builds, so the game publisher must never be named as their brand. */
++export const brandFor = (item) => (item.deck ? STORE_NAME : BRANDS[item.game] || "");
++
+ export function describe(item, shipping = {}) {
+-  const what = item.deck ? "Custom deck built by us, ready to play" : item.ship === "single" ? `${item.condition || "Near Mint"} single card` : "Factory sealed";
++  const what = item.deck
++    ? `Custom deck assembled by ${STORE_NAME} from cards opened from booster packs. Not factory sealed and not an official product of ${BRANDS[item.game] || "the game's publisher"}`
++    : item.ship === "single"
++      ? `${item.condition || "Near Mint"} single card`
++      : "Factory sealed";
+   const ship = shipFor(item, shipping);
+   return [item.set, what, ship ? `$${Number(ship).toFixed(2)} flat US shipping` : "Ships within the US"].filter(Boolean).join(" · ");
+ }
+ 
+-/** Google treats Near Mint singles as new; anything played is used. */
+-export const googleCondition = (item) => (!item.condition || /near mint|unopened/i.test(item.condition) ? "new" : "used");
++/** Google's "new" means unopened original packaging: custom decks are built from opened product, so they're used. */
++export const googleCondition = (item) => (item.deck ? "used" : !item.condition || /near mint|unopened/i.test(item.condition) ? "new" : "used");
+diff --git a/a/server/storeCatalog.js b/b/server/storeCatalog.js
+index 9ebbd88..bf7288e 100644
+--- a/a/server/storeCatalog.js
++++ b/b/server/storeCatalog.js
+@@ -5,7 +5,6 @@ import { fileURLToPath } from "url";
+ import { readStockRows, getSheetSyncSettings } from "./sheetLedger.js";
+ import { productDetails, productIdFromUrl, searchProducts } from "./tcgplayerCatalog.js";
+ import { getTcgplayerListings } from "./tcgplayerPriceImport.js";
+-import { limitedConfig, shownQty } from "./limitedItems.js";
+ import { buildDeckItems } from "./customDecks.js";
+ 
+ const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
+@@ -385,14 +384,14 @@ export async function buildStoreCatalog({ dryRun = false, overrides = {} } = {})
+   // Every price ends in .99, always rounding up so nothing drops below its floor. Locked prices are used as-is.
+   for (const it of items) if (!it.locked) it.price = Math.round((Math.floor(it.price + 1e-9) + 0.99) * 100) / 100;
+ 
+-  const limited = limitedConfig(settings);
+   const catalog = {
+     updatedAt: new Date().toISOString(),
+     count: items.length,
+     shipping: settings.shipping,
+     contactEmail: settings.contactEmail,
+     // Exact stock never leaves the PC: buyers only see "Low stock"; checkout verifies quantities server-side.
+-    items: items.map(({ productId, sheet, qty, floor, locked: _locked, ...rest }) => ({ ...rest, low: shownQty(rest.id, qty, limited) <= LOW_STOCK_AT })),
++    // "Low stock" follows the real count, not the limited-items display cap, so it's never a false scarcity claim.
++    items: items.map(({ productId, sheet, qty, floor, locked: _locked, ...rest }) => ({ ...rest, low: qty <= LOW_STOCK_AT })),
+   };
+   // Private twin of the catalog for checkout: exact quantities and the prices the server charges.
+   const stock = {
+diff --git a/a/storefront/about.html b/b/storefront/about.html
+index d8fdea0..21a48e2 100644
+--- a/a/storefront/about.html
++++ b/b/storefront/about.html
+@@ -28,7 +28,7 @@
+     .info ul { padding-left: 20px; }
+     .info a.mail { color: var(--accent2); }
+   </style>
+-  <script type="application/ld+json">{"@context":"https://schema.org","@type":"OnlineStore","name":"The PreEminent Store","legalName":"The PreEminent Store LLC","url":"https://preeminentstore.com/","logo":"https://preeminentstore.com/brand/logo.jpg","email":"sales@preeminentstore.com","foundingDate":"2024","sameAs":["https://www.instagram.com/thepreeminentstore/","https://www.youtube.com/@thezaiven"]}</script>
++  <script type="application/ld+json">{"@context":"https://schema.org","@type":"OnlineStore","name":"The PreEminent Store","legalName":"The PreEminent Store LLC","url":"https://preeminentstore.com/","logo":"https://preeminentstore.com/brand/logo.jpg","email":"sales@preeminentstore.com","foundingDate":"2024","address":{"@type":"PostalAddress","addressRegion":"CA","addressCountry":"US"},"contactPoint":{"@type":"ContactPoint","contactType":"customer service","email":"sales@preeminentstore.com","areaServed":"US","availableLanguage":"English"},"hasMerchantReturnPolicy":{"@type":"MerchantReturnPolicy","applicableCountry":"US","returnPolicyCategory":"https://schema.org/MerchantReturnNotPermitted","merchantReturnLink":"https://preeminentstore.com/info#returns"},"sameAs":["https://www.instagram.com/thepreeminentstore/","https://www.youtube.com/@thezaiven"]}</script>
+ </head>
+ <body>
+   <div class="bg-orbs" aria-hidden="true"><span></span><span></span><span></span></div>
+@@ -52,9 +52,12 @@
+         <li>One Piece Card Game</li>
+         <li>Riftbound</li>
+         <li>Flesh and Blood</li>
++        <li>Weiss Schwarz</li>
+         <li>Gundam Card Game</li>
+       </ul>
+-      <p>Sealed product is factory sealed and sourced from distributors and official retailers. Singles are listed with their condition so you know what you're getting.</p>
++      <p>Sealed product is factory sealed and sourced from distributors and retailers. Singles are listed with their condition so you know what you're getting.</p>
++      <p>We also sell <a class="mail" href="./#decks">custom decks</a> that we build by hand from cards we pulled in our own openings. They're ready to play, but they're opened cards, not factory-sealed or official publisher products, and each deck's page says so.</p>
++      <p>We're an online-only shop (no retail storefront). Orders ship from California, and we also sell on TCGplayer and eBay.</p>
+     </section>
+ 
+     <section id="how-we-ship">
+@@ -66,6 +69,10 @@
+     <section id="contact">
+       <h2>Get in touch</h2>
+       <p>Email: <!--email_off--><a class="mail" href="mailto:sales@preeminentstore.com">sales@preeminentstore.com</a><!--/email_off-->. We reply within 1 business day.</p>
++      <!-- Uncomment once the business phone (free Google Voice) is set up:
++      <p>Phone / text: <a class="mail" href="tel:+1XXXXXXXXXX">(XXX) XXX-XXXX</a>, Monday–Friday 10am–6pm Pacific.</p>
++      -->
++      <p>Policies: <a class="mail" href="info#shipping">shipping</a>, <a class="mail" href="info#tax">sales tax</a>, <a class="mail" href="info#returns">returns (all sales final)</a>, <a class="mail" href="info#cancellations">cancellations</a>, <a class="mail" href="info#privacy">privacy</a> and <a class="mail" href="info#terms">terms</a>.</p>
+       <p>Instagram: <a class="mail" href="https://www.instagram.com/thepreeminentstore/" target="_blank" rel="noopener">@thepreeminentstore</a> for new drops and deals.<br />
+       YouTube: <a class="mail" href="https://www.youtube.com/@thezaiven" target="_blank" rel="noopener">@thezaiven</a> for pack openings.</p>
+       <p>The PreEminent Store LLC</p>
+diff --git a/a/storefront/index.html b/b/storefront/index.html
+index 7cda8ad..610a3a9 100644
+--- a/a/storefront/index.html
++++ b/b/storefront/index.html
+@@ -5,7 +5,7 @@
+   <meta name="viewport" content="width=device-width, initial-scale=1" />
+   <base href="/" />
+   <title>The PreEminent Store · Sealed TCG Products</title>
+-  <meta name="description" content="Sealed Pokémon, Magic: The Gathering, Flesh and Blood, Weiss Schwarz and Riftbound products. Booster boxes, ETBs, bundles and collections shipped fast." />
++  <meta name="description" content="Sealed Pokémon, Magic: The Gathering, Flesh and Blood, Weiss Schwarz, Riftbound, One Piece and Gundam products, plus singles and custom-built decks. Ships within the US." />
+   <link rel="preconnect" href="https://fonts.googleapis.com" />
+   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+@@ -50,7 +50,7 @@
+   </header>
+ 
+   <a class="rave-bar" id="raveBar" href="#reviews" hidden>
+-    <span class="rave-head"><span class="rave-stars" aria-hidden="true">&#9733;&#9733;&#9733;&#9733;&#9733;</span> <strong><span class="rave-word">rave reviews</span><span class="rave-tail"> from collectors</span></strong></span>
++    <span class="rave-head"><strong><span class="rave-word">Buyer feedback</span><span class="rave-tail"> from TCGplayer</span></strong></span>
+     <span class="rave-quote" id="raveQuote"></span>
+   </a>
+ 
+@@ -90,7 +90,7 @@
+       <div class="shop-head">
+         <h2>Custom Decks</h2>
+       </div>
+-      <p class="decks-lede">Built by us from our own openings. Every deck is put together by hand and ready to play out of the box, great for new players learning the game and veterans who want a fresh build. Most are one of a kind, so when they're gone, they're gone.</p>
++      <p class="decks-lede">Built by us from cards opened in our own pack openings, so they're not factory sealed and aren't official publisher products. Every deck is put together by hand and ready to play out of the box, great for new players learning the game and veterans who want a fresh build. Most are one of a kind, so when they're gone, they're gone.</p>
+       <div class="chips" id="deckChips" role="tablist"></div>
+       <div class="grid" id="deckGrid"></div>
+     </section>
+@@ -117,7 +117,7 @@
+     <section class="reviews" id="reviews" hidden>
+       <div class="shop-head">
+         <h2>What collectors say</h2>
+-        <p class="reviews-score"><span class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span> <span id="reviewTotal"></span></p>
++        <p class="reviews-score"><span id="reviewTotal"></span></p>
+       </div>
+       <div class="review-track-wrap"><div class="review-track" id="reviewTrack"></div></div>
+     </section>
+@@ -131,10 +131,10 @@
+     </section>
+ 
+     <section class="perks">
+-      <div><span class="perk-icon">◆</span><h3>Factory sealed</h3><p>Every product ships sealed exactly as it left the distributor.</p></div>
++      <div><span class="perk-icon">◆</span><h3>Described honestly</h3><p>Sealed product ships factory sealed. Singles are listed with their condition. Custom decks are built by us from opened cards.</p></div>
+       <div><span class="perk-icon">⚡</span><h3>Simple shipping</h3><p>One flat rate per order: <span id="perkShip">$10.99</span> for sealed product, <span id="perkSingle">$1.49</span> for single cards.</p></div>
+       <div><span class="perk-icon">🛡</span><h3>Packed with care</h3><p>Boxes are double-boxed so corners arrive crisp.</p></div>
+-      <div><span class="perk-icon">★</span><h3>Live stock</h3><p>What you see is what we have. Inventory updates automatically.</p></div>
++      <div><span class="perk-icon">★</span><h3>Live stock</h3><p>Everything listed is in stock and ships from us. Inventory updates automatically.</p></div>
+     </section>
+   </main>
+ 
+@@ -155,7 +155,7 @@
+     </div>
+     <p>Ships within the United States &middot; <!--email_off--><a href="mailto:sales@preeminentstore.com">sales@preeminentstore.com</a><!--/email_off--></p>
+     <p class="fine">&copy; 2026 The PreEminent Store LLC</p>
+-    <p class="fine">Pokémon, Magic: The Gathering, Flesh and Blood, Weiss Schwarz and Riftbound are trademarks of their respective owners. PreEminent Store is an independent retailer. <span id="updated"></span></p>
++    <p class="fine">Pokémon, Magic: The Gathering, Flesh and Blood, Weiss Schwarz, Riftbound, One Piece Card Game and Gundam Card Game are trademarks of their respective owners. The PreEminent Store is an independent retailer and is not affiliated with, endorsed by or sponsored by them. <span id="updated"></span></p>
+   </footer>
+ 
+   <div class="scrim" id="scrim" hidden></div>
+diff --git a/a/storefront/info.html b/b/storefront/info.html
+index 647e4c3..2b81e38 100644
+--- a/a/storefront/info.html
++++ b/b/storefront/info.html
+@@ -4,6 +4,7 @@
+   <meta charset="utf-8" />
+   <meta name="viewport" content="width=device-width, initial-scale=1" />
+   <title>Shipping, Returns &amp; FAQ · PreEminent Store</title>
++  <meta name="description" content="Shipping, sales tax, returns, cancellations, privacy and terms for The PreEminent Store LLC, an online trading card shop that ships within the US." />
+   <link rel="canonical" href="https://preeminentstore.com/info" />
+   <link rel="preconnect" href="https://fonts.googleapis.com" />
+   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+@@ -39,7 +40,9 @@
+     <h1>Store info</h1>
+     <nav class="info-nav">
+       <a class="chip" href="#shipping">Shipping</a>
+-      <a class="chip" href="#returns">Refunds</a>
++      <a class="chip" href="#tax">Sales tax</a>
++      <a class="chip" href="#returns">Returns &amp; refunds</a>
++      <a class="chip" href="#cancellations">Cancellations</a>
+       <a class="chip" href="#faq">FAQ</a>
+       <a class="chip" href="#contact">Contact</a>
+       <a class="chip" href="#privacy">Privacy</a>
+@@ -52,26 +55,40 @@
+       <p>We ship within the United States only. Shipping is one flat rate per order, no matter how many items you buy:</p>
+       <ul>
+         <li><strong>Sealed product</strong> (booster boxes, ETBs, bundles, collections): <strong class="ship-standard">$10.99</strong></li>
++        <li><strong>Custom decks</strong> (with no sealed product in the order): the deck rate shown on the deck's page</li>
+         <li><strong>Single cards only</strong>: <strong class="ship-single">$1.49</strong></li>
+       </ul>
+       <p class="free-line" hidden></p>
+-      <p>Orders are packed within 1–2 business days and ship with tracking. You'll get an email with your tracking number once it ships. Boxes are packed with padding so corners and seals arrive intact.</p>
++      <p>The shipping charge is shown in your cart and again before you pay. There are no other fees.</p>
++      <p>Orders are packed within 1–2 business days and ship with tracking, usually arriving 2–5 business days after shipping. You'll get an email with your tracking number once it ships. Boxes are packed with padding so corners and seals arrive intact.</p>
++    </section>
++
++    <section id="tax">
++      <h2>Sales tax</h2>
++      <p>We collect sales tax only on orders shipped to California addresses, at the rate for the delivery address. Orders shipped to other states aren't charged sales tax by us. The exact tax, if any, is shown before you pay.</p>
+     </section>
+ 
+     <section id="returns">
+       <h2>Returns &amp; refunds</h2>
+-      <p><strong>All sales are final.</strong> Because sealed trading card products can be resealed or tampered with, we don't accept returns or exchanges.</p>
++      <p><strong>No returns. All sales are final.</strong> Because trading card products can be resealed, swapped or tampered with, we don't accept returns or exchanges on any item, including sealed product, singles and custom decks.</p>
+       <ul>
+-        <li>If your order arrives damaged or you received the wrong item, email us within <strong>3 days</strong> of delivery with photos and we'll make it right with a replacement or full refund, including shipping.</li>
+-        <li>If an item sells out before we can ship it, we'll refund that item in full right away.</li>
++        <li><strong>Damaged or wrong item:</strong> email us within <strong>3 days</strong> of delivery with photos and we'll make it right with a replacement or full refund, including shipping. You don't need to send the item back unless we ask (and if we do, we pay the return shipping).</li>
++        <li><strong>Lost package:</strong> if tracking shows no movement for 10 days, or it says delivered but you don't have it, email us and we'll file a claim with the carrier and send a replacement or full refund.</li>
++        <li><strong>Sold out:</strong> if an item sells out before we can ship it, we'll refund that item in full right away.</li>
+         <li>Refunds go back to your original payment method and usually appear within 5–10 business days.</li>
+       </ul>
+     </section>
+ 
++    <section id="cancellations">
++      <h2>Cancellations</h2>
++      <p>You can cancel for a full refund any time before your order ships. Email us with your order number. Once an order has shipped it can't be cancelled.</p>
++      <p>Unpaid Venmo and Zelle orders are cancelled automatically after 24 hours.</p>
++    </section>
++
+     <section id="faq">
+       <h2>FAQ</h2>
+       <h3>Are your products authentic?</h3>
+-      <p>Yes. Everything is factory sealed and purchased from distributors and official retailers.</p>
++      <p>Yes. Sealed product is factory sealed and purchased from distributors and retailers. Single cards are listed with their condition. Custom decks are built by us from cards we opened ourselves, so they aren't factory sealed and aren't official publisher products.</p>
+       <h3>Is the stock shown accurate?</h3>
+       <p>Inventory updates automatically throughout the day. On rare occasions an item sells elsewhere at the same moment. If that happens, we refund that item immediately.</p>
+       <h3>How do I pay?</h3>
+@@ -92,8 +109,17 @@
+     <section id="contact">
+       <h2>Contact</h2>
+       <p>Questions about an order or a product? Email us at <!--email_off--><a class="mail" id="contactEmail" href="mailto:sales@preeminentstore.com">sales@preeminentstore.com</a><!--/email_off--> and we'll reply within 1 business day.</p>
++      <!-- Uncomment once the business phone (free Google Voice) is set up:
++      <p>Phone / text: <a class="mail" href="tel:+1XXXXXXXXXX">(XXX) XXX-XXXX</a>, Monday–Friday 10am–6pm Pacific.</p>
++      -->
+       <p>Follow along on <a class="mail" href="https://www.youtube.com/@thezaiven" target="_blank" rel="noopener">YouTube</a> for pack openings and <a class="mail" href="https://www.instagram.com/thepreeminentstore/" target="_blank" rel="noopener">Instagram</a> for new drops and deals.</p>
+-      <p>The PreEminent Store LLC</p>
++      <h3>Business details</h3>
++      <ul>
++        <li>Legal name: The PreEminent Store LLC, a California limited liability company</li>
++        <li>Online-only store: we don't have a retail storefront, and orders ship from California</li>
++        <li>Website: preeminentstore.com</li>
++        <li>Also sells on TCGplayer and eBay</li>
++      </ul>
+     </section>
+ 
+     <section id="privacy">
+@@ -109,7 +135,8 @@
+         <li>Prices are in US dollars and can change at any time. You pay the price shown when you place your order.</li>
+         <li>Product images are for reference; packaging can vary slightly between print runs.</li>
+         <li>We may cancel and fully refund any order if an item is out of stock, mispriced, or the order appears fraudulent.</li>
+-        <li>Pokémon, Magic: The Gathering, Flesh and Blood, Weiss Schwarz, Riftbound and other names are trademarks of their respective owners. PreEminent Store is an independent retailer and is not affiliated with them.</li>
++        <li>Custom decks are assembled by us from opened cards. They're sold as used, aren't factory sealed and aren't official publisher products.</li>
++        <li>Pokémon, Magic: The Gathering, Flesh and Blood, Weiss Schwarz, Riftbound, One Piece Card Game, Gundam Card Game and other names are trademarks of their respective owners. The PreEminent Store is an independent retailer and is not affiliated with, endorsed by or sponsored by them.</li>
+       </ul>
+     </section>
+   </main>
+diff --git a/a/storefront/store.js b/b/storefront/store.js
+index ec68f4a..3014e9c 100644
+--- a/a/storefront/store.js
++++ b/b/storefront/store.js
+@@ -242,13 +242,13 @@
+         <h3>${esc(i.name)}</h3>
+         <span class="price">${money(i.price)}</span>
+         <span class="stock-pill${low ? " low" : ""}">${low ? "Low stock" : "In stock"}</span>
+-        ${i.deck ? `<p class="deck-note">Hand-built by us from cards we pulled in our own openings. Ready to play, great for new players and veterans alike.</p>` : ""}
++        ${i.deck ? `<p class="deck-note">Hand-built by us from cards we pulled in our own openings, so the cards are opened (not factory sealed). This is a custom deck, not an official ${esc(g.label)} product. Ready to play, great for new players and veterans alike.</p>` : ""}
+         <dl>
+           ${i.includes?.length ? `<dt>Includes</dt><dd>${i.includes.map(esc).join(", ")}</dd>` : ""}
+           ${i.set ? `<dt>${i.deck ? "Format" : "Set"}</dt><dd>${esc(i.set)}${i.code ? ` (${esc(i.code)})` : ""}</dd>` : ""}
+           ${i.type ? `<dt>Type</dt><dd>${esc(i.type)}</dd>` : ""}
+           ${i.rarity ? `<dt>Rarity</dt><dd>${esc(i.rarity)}</dd>` : ""}
+-          <dt>Condition</dt><dd>${esc(i.condition || "Factory sealed")}</dd>
++          <dt>Condition</dt><dd>${esc(i.condition || (i.deck ? "Opened cards, built by us" : "Factory sealed"))}</dd>
+           <dt>Shipping</dt><dd>${deckRate(i) ? `${money(deckRate(i))} flat on deck orders (${money(shipping.standard)} if your order includes sealed product)` : `${money(i.ship === "single" ? shipping.single : shipping.standard)} flat per order`}</dd>
+         </dl>
+         <div class="modal-actions">
+@@ -741,14 +741,14 @@
+   async function loadReviews() {
+     const { reviews = [], source = "" } = await fetch("reviews.json").then((r) => r.json());
+     if (!reviews.length) return;
++    const platform = source.replace(/ buyer feedback$/, "") || "marketplace";
+     const card = (r) => `<article class="review">
+-        <span class="stars" aria-label="5 stars">★★★★★</span>
+         <p>“${esc(r.text)}”</p>
+-        <footer><strong>${esc(r.name)}</strong><span>Verified buyer</span></footer>
++        <footer><strong>${esc(r.name)}</strong><span>${esc(platform)} buyer${r.date ? ` · ${esc(r.date.slice(0, 7))}` : ""}</span></footer>
+       </article>`;
+     const cards = reviews.map(card).join("");
+     $("#reviewTrack").innerHTML = cards + cards;
+-    $("#reviewTotal").textContent = `Rave reviews from our ${source.replace(/ buyer feedback$/, "") || "verified"} buyers`;
++    $("#reviewTotal").textContent = `Selected feedback our ${platform} buyers left for our seller account`;
+     $("#reviews").hidden = false;
+     raveBar(reviews);
+   }
+@@ -769,7 +769,7 @@
+     const show = (r) => {
+       quoteEl.innerHTML = `<q>${esc(r.text)}</q> <cite>\u2014 ${esc(r.name)}</cite>`;
+     };
+-    bar.setAttribute("aria-label", "Read rave reviews from collectors");
++    bar.setAttribute("aria-label", "Read feedback from our TCGplayer buyers");
+     show(quotes[0]);
+     bar.hidden = false;
+     bar.addEventListener("click", (e) => {

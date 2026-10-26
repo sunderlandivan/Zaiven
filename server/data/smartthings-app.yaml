@@ -1,0 +1,16 @@
+appName: zee-hud
+displayName: Zee HUD
+description: Personal HUD for SmartThings device control on the local Zee dashboard.
+appType: API_ONLY
+singleInstance: true
+classifications:
+  - CONNECTED_SERVICE
+oauth:
+  clientName: Zee HUD
+  scope:
+    - r:devices:*
+    - x:devices:*
+    - r:locations:*
+  redirectUris:
+    - http://localhost:5173/api/zee/smart-home/oauth/callback
+    - http://127.0.0.1:5173/api/zee/smart-home/oauth/callback

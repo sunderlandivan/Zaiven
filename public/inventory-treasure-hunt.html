@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Treasure Hunt — TCG Inventory</title>
+    <link rel="icon" type="image/png" href="/brand/logo.png" />
+    <link rel="stylesheet" href="/inventory.css" />
+    <script src="/portal-ui.js"></script>
+  </head>
+  <body data-page="treasure">
+    <div class="app-shell">
+      <aside class="nav-pane">
+        <div class="nav-brand">The PreEminent Store - Portal</div>
+        <nav class="nav-links">
+          <div class="nav-group">Daily</div>
+          <a class="nav-link" href="/inventory-orders.html">Order Tracking</a>
+          <a class="nav-link" href="/inventory-stock.html">Inventory</a>
+          <div class="nav-group">Business</div>
+          <a class="nav-link" href="/inventory-sheet-sync.html">Sheet Sync</a>
+          <a class="nav-link" href="/inventory-analytics.html">Selling Analytics</a>
+          <a class="nav-link" href="/inventory-dashboard-analytics.html">Dashboard Analytics</a>
+          <a class="nav-link" href="/inventory-marketing.html">Marketing</a>
+          <a class="nav-link" href="/inventory-import.html">Import and Pricing</a>
+          <a class="nav-link active" href="/inventory-treasure-hunt.html">Treasure Hunt</a>
+          <div class="nav-group">Owner</div>
+          <a class="nav-link" href="/inventory-tax-prep.html">Tax Prep</a>
+          <a class="nav-link" href="/inventory-loan.html">Loan</a>
+        </nav>
+      </aside>
+      <main class="nav-content">
+        <header class="content-header">
+          <div class="page-heading">
+            <h1>Treasure Hunt</h1>
+            <p class="page-subtitle">Find products selling below what you paid, so you can restock for less.</p>
+          </div>
+        </header>
+
+        <section class="panel">
+          <h2>How this works</h2>
+          <p class="help">
+            <strong>Auto-scan</strong> walks your in-stock import and checks a <strong>fresh TCGplayer list price</strong>
+            for each line (same logic as “Refresh market prices”). It estimates your <strong>landed</strong> cost using the
+            tax % and flat shipping you enter (applied to that list price), then flags a hit if landed is far enough
+            <strong>below your recorded unit cost</strong>. Only TCGplayer gets a live list price in this flow, so hits
+            show <strong>TCGplayer</strong> as the vendor. Use <strong>Quick store search</strong> to check other
+            sellers yourself. <strong>Manual deals</strong> — log a link and price you found anywhere; we compare to
+            your sheet cost. Always confirm the listing and seller before buying.
+          </p>
+        </section>
+
+        <section class="panel">
+          <h2>Auto-scan (TCGplayer vs your cost)</h2>
+          <p class="help">
+            The server also runs this scan <strong>automatically in the background</strong> (first time a few minutes
+            after you start it, then on a long interval) so you usually do not need to press Run. Each run uses the same
+            fixed rules (below), scans <strong>every</strong> in-stock line with unit cost (quantity ≥ 1, unit cost &gt;
+            0), with a short pause per row so TCGplayer is not hammered — large sheets can take a while. When hits are
+            found, the <strong>Treasure Hunt</strong> link in the sidebar flashes with stars until you click
+            <strong>Stop flashing</strong> below. To turn passive scans off, set environment variable
+            <code>TREASURE_PASSIVE_SCAN=0</code> before starting the server.
+          </p>
+          <p class="help treasure-scan-defaults-note">
+            <strong>Fixed scan rules:</strong> all eligible lines · landed must be at least <strong>8%</strong> below
+            your unit cost · <strong>8%</strong> estimated tax on list price · <strong>$10.99</strong> flat shipping per
+            unit (landed = list × 1.08 + 10.99).
+          </p>
+          <form id="scanForm" class="treasure-form-actions treasure-scan-actions">
+            <button type="submit" id="scanSubmitBtn">Run scan now</button>
+            <button type="button" id="markTreasureSeenBtn" class="subtle">Stop flashing the sidebar (I’ve reviewed)</button>
+          </form>
+          <p id="scanProgress" class="help"></p>
+          <div id="scanErrors" class="help treasure-errors"></div>
+          <h3 class="treasure-subhead">Latest hits</h3>
+          <p class="help tight">
+            Each row is a scan hit vs your cost. Use <strong>Log deal</strong> to add it to your deal log using the
+            <strong>est. landed</strong> price and vendor link (same tax/ship assumptions as the scan).
+          </p>
+          <div class="table-wrap">
+            <table id="scanFindingsTable">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Your cost</th>
+                  <th>List price</th>
+                  <th>Est. landed</th>
+                  <th>You save / unit</th>
+                  <th>Vendor name</th>
+                  <th class="treasure-hit-actions-col">Log deal</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>Quick store search</h2>
+          <p class="help">
+            Enter a product name, then open a search on a trusted seller or marketplace. Use the same text if you use
+            manual deal entry.
+          </p>
+          <div class="treasure-quick-search">
+            <input id="searchQuery" type="text" placeholder="e.g. Destined Rivals Booster Bundle" />
+          </div>
+          <div id="quickStoreButtons" class="treasure-quick-stores"></div>
+        </section>
+
+        <section class="panel treasure-manual-deal-panel">
+          <details class="treasure-manual-deal-details">
+            <summary class="treasure-manual-deal-summary">Manual deal entry <span class="treasure-field-hint">(optional)</span></summary>
+            <div class="treasure-manual-deal-inner">
+              <p class="help">
+                For prices you typed in yourself from another store. Most hits can be logged from <strong>Latest hits</strong>
+                above.
+              </p>
+          <form id="dealForm" class="treasure-form-stack">
+            <div class="treasure-form-grid treasure-form-grid--deal">
+              <label class="treasure-field">
+                <span class="treasure-field-label">Product <span class="treasure-field-hint">(as on listing)</span></span>
+                <input name="productQuery" type="text" required placeholder="Title from the deal page" />
+              </label>
+              <label class="treasure-field">
+                <span class="treasure-field-label">Store</span>
+                <select name="storeLabel" id="storeLabelSelect">
+                  <option>TCGplayer</option>
+                  <option>eBay</option>
+                  <option>Stomping Grounds TCG</option>
+                  <option>Double Infinity Gaming</option>
+                  <option>Shop app</option>
+                  <option>Other LGS / marketplace</option>
+                </select>
+              </label>
+              <label class="treasure-field">
+                <span class="treasure-field-label">Deal URL <span class="treasure-field-hint">(optional)</span></span>
+                <input name="dealUrl" type="url" placeholder="https://…" />
+              </label>
+              <label class="treasure-field">
+                <span class="treasure-field-label">Deal price ($)</span>
+                <input name="dealPrice" type="number" min="0.01" step="0.01" required placeholder="89.99" />
+              </label>
+              <label class="treasure-field treasure-span-2">
+                <span class="treasure-field-label">Match inventory row <span class="treasure-field-hint">(optional)</span></span>
+                <select name="inventoryItemId" id="inventoryMatchSelect">
+                  <option value="">— Auto-match from product title —</option>
+                </select>
+              </label>
+              <label class="treasure-field treasure-span-2">
+                <span class="treasure-field-label">Notes</span>
+                <input name="notes" type="text" placeholder="Coupon, shipping note…" />
+              </label>
+            </div>
+            <div class="treasure-form-actions treasure-form-actions--split">
+              <label class="treasure-inline-field">
+                <span class="treasure-inline-field-label">Status</span>
+                <select name="status">
+                  <option value="watching">Watching</option>
+                  <option value="bought">Bought</option>
+                  <option value="passed">Passed</option>
+                </select>
+              </label>
+              <button type="submit">Save deal</button>
+            </div>
+          </form>
+            </div>
+          </details>
+        </section>
+
+        <section class="panel">
+          <h2>Your deal log</h2>
+          <p class="help">Rows sort newest first. Savings = your matched unit cost minus deal price (per unit).</p>
+          <div class="table-wrap">
+            <table id="dealsTable">
+              <thead>
+                <tr>
+                  <th>When</th>
+                  <th>Product</th>
+                  <th>Store</th>
+                  <th>Deal</th>
+                  <th>Your cost</th>
+                  <th>Savings / unit</th>
+                  <th>Status</th>
+                  <th>Match row</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+
+        <p id="treasureStatus" class="status"></p>
+      </main>
+    </div>
+    <script type="module" src="/inventory-nav.js"></script>
+    <script type="module" src="/inventory-treasure-hunt.js"></script>
+  </body>
+</html>
