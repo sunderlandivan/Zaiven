@@ -38,13 +38,11 @@ tmp-*.html
 temp_*
 *.log
 
-# Unreal / game prototypes (huge; keep local or separate repo)
+# Game prototypes — not part of the store hub (keep local / separate repos only)
 pirate-warships-ue/
 pirate-warships-ue-bp/
-pirate-warships-web/Saved/
-pirate-warships-web/Binaries/
-pirate-warships-web/Intermediate/
-pirate-warships-web/DerivedDataCache/
+pirate-warships-web/
+seniormind/
 
 # Cloudflare / wrangler local
 .wrangler/

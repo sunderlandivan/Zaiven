@@ -1,5 +1,5 @@
 {
-  "name": "tcg-4p-high-card",
+  "name": "preeminent-store",
   "private": true,
   "version": "2.0.0",
   "type": "module",
@@ -19,7 +19,6 @@
     "ffmpeg-static": "^5.3.0",
     "nanoid": "^5.0.7",
     "sharp": "^0.33.5",
-    "socket.io": "^4.7.5",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
