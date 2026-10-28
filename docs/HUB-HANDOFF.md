@@ -5,7 +5,7 @@
 | | |
 |--|--|
 | **Repo** | https://github.com/sunderlandivan/Zaiven (`main`) |
-| **Folder** | `OneDrive\Documents\Cursor\TCG` |
+| **Folder** | Laptop hub: `C:\Users\Zaiven\Documents\Cursor\TCG` (clone of Zaiven) |
 | **Site** | https://preeminentstore.com |
 | **Portal media** | https://portal.preeminentstore.com |
 | **Local app** | http://localhost:5173 (`npm start`) |
@@ -14,7 +14,7 @@
 | **GitHub auth** | **sunderlandivan** (not `ThePreEminentStore` — that account 403s on Zaiven) |
 | **Packaged** | 2026-10-26 |
 
-**Not the hub:** Cursor chats under `thepreeminentstore.github.io` or `preeminent-marketing`. Optional Shorts/playbook only. Code + inventory + portal + Google fixes = **this repo**.
+**Single hub:** this Zaiven/TCG repo only. The old GitHub shells `ThePreEminentStore/thepreeminentstore.github.io` and `ThePreEminentStore/preeminent-marketing` are **archived** (2026-10-28). Marketing agent playbook + scripts live here: `docs/marketing-agent.md`, `scripts/marketing/`. Do not reopen those old Cursor projects as the store console.
 
 **Transfer pack (secrets, not in git):**  
 `OneDrive\Documents\Cursor\TCG-HUB-TRANSFER-<date>\` (and `.zip`) — created by `scripts/pack-hub-transfer.ps1` on the old PC. Contains full `data\` + `set-user-env.ps1` + `INSTALL.txt`.

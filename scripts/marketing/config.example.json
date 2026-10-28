@@ -1,0 +1,4 @@
+﻿{
+  "site": "https://preeminentstore.com",
+  "token": "set via PREEMINENT_AGENT_TOKEN or data/agent-token.json on the hub"
+}

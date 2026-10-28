@@ -92,4 +92,4 @@ Below the 10% profit minimum (website charges the minimum):
 - [ ] Google Merchant Center (free listings): sign up, verify preeminentstore.com, add feed https://preeminentstore.com/feed.xml (daily fetch), set shipping to match the store.
 - [ ] Google Search Console: add preeminentstore.com and submit https://preeminentstore.com/sitemap.xml.
 - [ ] Cloudflare: Workers & Pages -> preeminentstore -> Metrics -> enable Web Analytics (free visitor stats).
-- [ ] Create private GitHub repo preeminent-marketing and connect it to the daily Cursor marketing automation.
+- [x] Marketing agent lives in Zaiven (`docs/marketing-agent.md`, `scripts/marketing/`). Old `preeminent-marketing` repo archived.

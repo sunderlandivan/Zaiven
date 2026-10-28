@@ -1,6 +1,6 @@
 # Paste this as the **entire first message** to a **New Agent** on the hub laptop
 
-(Open folder `OneDrive\Documents\Cursor\TCG` in Cursor first. Do not reuse chats under `thepreeminentstore.github.io` or `preeminent-marketing`.)
+(Open the Zaiven hub folder first — laptop: `C:\Users\Zaiven\Documents\Cursor\TCG`. Do not reuse chats under the archived `thepreeminentstore.github.io` or `preeminent-marketing` projects.)
 
 ---
 

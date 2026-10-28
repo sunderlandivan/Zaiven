@@ -12,6 +12,8 @@ yarn-error.log*
 **/*secret*
 **/oauth*.json
 **/agent-token.json
+scripts/marketing/config.json
+scripts/marketing/.cache/
 seniormind/.env.local
 server/data/zee-smartthings-oauth.json
 

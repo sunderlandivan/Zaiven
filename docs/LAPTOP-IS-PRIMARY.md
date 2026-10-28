@@ -13,9 +13,8 @@ This machine (`C:\Users\Zaiven\Documents\Cursor\TCG`) is the PreEminent Store op
 You own: portal, website (Cloudflare), Merchant Center, physical inventory + Sheet, sales intake (eBay/TCG/PayPal/web).
 Hard rules in `.cursor/rules/` and `docs/HUB-HANDOFF.md` still apply (Sold 2025 locked, no price changes without owner OK, custom decks off Shopping).
 
-## Optional next (owner login)
-- `npx wrangler login` when deploying site/portal
-- Do not rely on empty OneDrive `Documents\Cursor\TCG` shells — use this Documents path
+## Single repo
+Only **Zaiven** / this `TCG` folder. Archived (do not use as hub): `thepreeminentstore.github.io`, `preeminent-marketing`. Marketing: `docs/marketing-agent.md`.
 
 ## Old PC
-Portal on the previous desktop should be stopped so only this laptop serves sheet sync / intake.
+Portal on the previous desktop should stay stopped so only this laptop serves sheet sync / intake.
