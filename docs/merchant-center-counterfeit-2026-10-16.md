@@ -1,5 +1,9 @@
 # Merchant Center Counterfeit suspension (Oct 16, 2026)
 
+> **Status (Oct 31, 2026):** **CLEARED.** Google email: review of suspended account (counterfeit) is complete; the issue **no longer appears** on Merchant Center account The PreEminent Store (`5871019770`). Keep custom decks off Shopping surfaces.
+>
+> **Status (Nov 9, 2026):** Confirmed live — Overview shows **358 Approved** / 0 Not approved / 0 Limited. Needs attention is empty. “Add your products” email is obsolete. **Image floor (500×500 short side):** feed-only upscale applied + storefront redeployed (Nov 9); live `/img/` ≥500 on short side. Backups in `data/img-backup-pre-500px/`. Redeploy storefront from `cloudflare/` (includes Functions) — root-only `pages deploy storefront` can leave the production alias without Functions.
+
 ## What happened
 
 Today at **11:57 AM PT**, Google Merchant Center sent two emails for account **The PreEminent Store (5871019770)**:
@@ -68,9 +72,18 @@ Google only asked to confirm the issue was fixed. If they email for more detail,
 - Live verified: feed **296 items / 0 decks**; sitemap **0 `deck-` URLs**; sample deck page has **noindex** and **no Product LD**.
 - Merchant Center **Update products now** triggered; **new review requested Oct 26, 2026** (“Review requested on Oct 26, 2026. It can take a few days to complete.”).
 
+## Status check — Oct 28, 2026 (top priority)
+
+- Merchant Center Overview: **still blocked** — “Your products aren’t shown to customers” / Fix Counterfeit (United States).
+- Account issues: **Review requested on Oct 26, 2026. It can take a few days to complete.** No new result email yet (~2 days into this review).
+- Data sources: **296 products**, last fetch **Oct 28, 2026 00:00 PDT** (healthy).
+- Live site re-verified: feed **296 / 0 decks**; sitemap **0 `deck-` URLs**; sample custom deck PDP has **noindex** and **no Product JSON-LD**.
+- GSC (separate, lower priority): 13 indexed; 345 not indexed mostly “Discovered – currently not indexed” (337) + known redirect URLs (5). Does **not** block Shopping; MC Counterfeit does.
+- **Do not** request another review while Oct 26 is pending. **Do not** edit business name / website / business info.
+
 ## What the owner may still need to do
 
-1. Wait for Google’s Oct 26 review result (often a few days; counterfeit can take longer).
+1. Wait for Google’s Oct 26 review result (often a few days; counterfeit can take longer). Watch for email + MC Diagnostics.
 2. If Google asks for **identity verification or invoices**, complete that yourself — agents must not handle government ID or EIN.
 3. Do **not** change the business name, website, or business info while the review is pending.
 4. Do **not** put custom decks back into `feed.xml`, the sitemap, or Product JSON-LD.

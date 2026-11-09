@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Physical Inventory — TCG Inventory</title>
+    <link rel="icon" type="image/png" href="/brand/logo.png" />
+    <link rel="stylesheet" href="/inventory.css" />
+    <script src="/portal-ui.js"></script>
+  </head>
+  <body data-page="physical">
+    <div class="app-shell">
+      <aside class="nav-pane">
+        <div class="nav-brand">The PreEminent Store - Portal</div>
+        <nav class="nav-links">
+          <div class="nav-group">Daily</div>
+          <a class="nav-link" href="/inventory-orders.html">Order Tracking</a>
+          <a class="nav-link" href="/inventory-stock.html">Inventory</a>
+          <div class="nav-group">Business</div>
+          <a class="nav-link" href="/inventory-sheet-sync.html">Sheet Sync</a>
+          <a class="nav-link" href="/inventory-analytics.html">Selling Analytics</a>
+          <a class="nav-link" href="/inventory-dashboard-analytics.html">Dashboard Analytics</a>
+          <a class="nav-link" href="/inventory-marketing.html">Marketing</a>
+          <a class="nav-link" href="/inventory-import.html">Import and Pricing</a>
+          <a class="nav-link" href="/inventory-treasure-hunt.html">Treasure Hunt</a>
+          <div class="nav-group">Owner</div>
+          <a class="nav-link active" href="/inventory-physical.html">Physical Inventory</a>
+          <a class="nav-link" href="/inventory-tax-prep.html">Tax Prep</a>
+          <a class="nav-link" href="/inventory-loan.html">Loan</a>
+        </nav>
+      </aside>
+      <main class="nav-content">
+        <header class="content-header tax-prep-header">
+          <div class="page-heading">
+            <h1>Physical Inventory</h1>
+            <p class="page-subtitle">Nov 3–4 count vs the pre-count sheet baseline. Soft shortages and photo fixes.</p>
+          </div>
+          <div class="row tax-prep-toolbar">
+            <button id="physReloadBtn" type="button" class="subtle">Reload</button>
+            <button id="physRefreshBtn" type="button">Re-compare sheet</button>
+            <span class="help" id="physStatus"></span>
+          </div>
+        </header>
+
+        <p class="help">
+          Baseline: <code>data/physical-inventory-baseline-pre-2026-11-03.json</code>. Website stock stays capped
+          (limited items / display caps) — this page is warehouse truth, not retail availability.
+        </p>
+
+        <section class="panel">
+          <h2>Status</h2>
+          <div id="physKpis" class="dashboard-kpi-grid"></div>
+          <p id="physNote" class="help totals-explainer"></p>
+        </section>
+
+        <section class="panel">
+          <h2>Still open (soft shortages)</h2>
+          <div class="table-wrap scroll-x">
+            <table class="tax-sheet" id="physOpenTable">
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th>PID</th>
+                  <th>Before</th>
+                  <th>After</th>
+                  <th>Δ</th>
+                  <th>Soft</th>
+                  <th>Note</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>Raises / found stock</h2>
+          <div class="table-wrap scroll-x">
+            <table class="tax-sheet" id="physRaiseTable">
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th>PID</th>
+                  <th>Before</th>
+                  <th>After</th>
+                  <th>Δ</th>
+                  <th>Note</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>New product IDs (added during count)</h2>
+          <div class="table-wrap scroll-x">
+            <table class="tax-sheet" id="physNewTable">
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th>PID</th>
+                  <th>Qty</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+    <script src="/inventory-physical.js" defer></script>
+  </body>
+</html>

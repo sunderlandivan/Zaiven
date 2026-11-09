@@ -550,7 +550,9 @@ export async function applySaleLine(line) {
     }
     await updateCells(table.tab, cells);
     results.push({ action: "qty_lowered", tab: table.tab, row: fresh.rowNumber, itemId: fresh.itemId, from: fresh.qty, to: newQty });
-    line = { ...line, cost: fresh.cost, code: fresh.code, type: fresh.type, itemId: fresh.itemId };
+    // Prefer an explicit line.cost (e.g. highest-cost across tabs); else this row's cost.
+    const cost = line.cost != null && line.cost !== "" ? line.cost : fresh.cost;
+    line = { ...line, cost, code: fresh.code, type: fresh.type, itemId: fresh.itemId };
   }
 
   const itemId = line.itemId || line.description;

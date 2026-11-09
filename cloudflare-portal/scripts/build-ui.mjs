@@ -20,6 +20,7 @@ const PC_PAGES = {
   "inventory-marketing.html": {},
   "inventory-sheet-sync.html": {},
   "inventory-tax-prep.html": {},
+  "inventory-physical.html": {},
   "inventory-loan.html": {},
   "inventory-import.html": { drop: ["/inventory.js"] },
   "order-doc.html": {},
@@ -32,6 +33,7 @@ const PC_ASSETS = [
   "inventory-marketing.js",
   "inventory-sheet-sync.js",
   "inventory-tax-prep.js",
+  "inventory-physical.js",
   "inventory-loan.js",
   "order-doc.js",
 ];

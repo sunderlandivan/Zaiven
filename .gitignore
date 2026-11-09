@@ -22,9 +22,19 @@ data/*.json
 data/backups/
 data/business-docs/
 data/distributor-kit/
+data/imports/
+data/img-backup-pre-500px/
+data/promo-shorts/
+data/screenshots/
+data/shorts/
+data/_inv-thumbs/
 data/*.log
 data/*.csv
 server/data/*.json
+
+# Scratch / temp
+.tmp_*/
+tmp-montage/
 
 # Hub laptop transfer packs (secrets + data — OneDrive only, never git)
 TCG-HUB-TRANSFER*/

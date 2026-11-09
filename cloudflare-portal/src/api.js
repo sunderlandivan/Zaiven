@@ -229,6 +229,14 @@ add("POST", "/api/marketing/promo-shorts", "manager", pcOnly, "pc");
 
 // ---------- owner finances ----------
 
+add("GET", "/api/physical-inventory", "owner", async ({ env, url }) => {
+  const doc = (await readDoc(env, "physical-inventory-diff-live", null)) || null;
+  if (!doc) throw new HttpError(404, "Physical inventory report not migrated yet. Run migrate-data on the PC.");
+  if (url.searchParams.get("refresh") === "1") {
+    return { data: doc, note: "Sheet re-compare runs on the PC portal; showing last migrated snapshot." };
+  }
+  return { data: doc };
+});
 add("GET", "/api/tax-prep", "owner", async ({ env, url }) => ({ data: await taxPrepReport(env, url.searchParams.get("year")) }));
 add("PUT", "/api/tax-prep/[^/]+", "owner", pcOnly, "pc");
 add("POST", "/api/tax-prep/snapshot-inventory", "owner", pcOnly, "pc");

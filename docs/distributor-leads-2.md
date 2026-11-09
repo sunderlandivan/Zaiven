@@ -4,7 +4,11 @@ Researched 2026-10-08. Nothing was sent, submitted, or signed up for. This is a 
 
 Excluded because they were already contacted (see `docs/distributor-plan.md` and the private kit README): ACD, Hills, Carta, Gold River, PHD/Peachstate, Universal US, Mad Al, Southern Hobby, GTS, Sweet Deal.
 
-**The short version:** only one remaining authorized US Pokémon distributor looks like it might take an online store, and that's MichiganHobby. Two more on Pokémon's list (Magazine Exchange and Hamps) haven't published a policy, so call them. No authorized source anywhere sells current sealed Magic, Flesh and Blood, One Piece (English), Gundam or Lorcana to an online-only shop. ACD (already applied) and Carta (already applied) are the only open routes for those. Beyond that, the realistic sources are accessories direct from BCW, Japanese-import wholesalers, and secondary wholesalers that charge near market price.
+**The short version:** only one remaining authorized US Pokémon distributor looks like it might take an online store, and that's MichiganHobby. Two more on Pokémon's list (Magazine Exchange and Hamps) haven't published a policy, so call them. No authorized source anywhere sells current sealed Magic, Flesh and Blood, One Piece (English), Gundam or Lorcana to an online-only shop. ACD (already applied) and Carta (already applied) are the only open routes for those.
+
+**Owner focus (2026-10-28):** Pokémon and Magic only — skip accessory suppliers (BCW etc.) and Japanese-product sources (KING PUNCH, Pokedot, Japanese-TCG.com).
+
+**Owner focus (2026-11-02):** Prefer **US suppliers**, or sources that can supply **English** product for the US store. Do not treat UK/EU wholesale as a substitute for authorized US distributors unless asked.
 
 ---
 

@@ -57,6 +57,7 @@
     "/inventory-marketing.html": "marketing",
     "/inventory-import.html": "import",
     "/inventory-treasure-hunt.html": "treasure",
+    "/inventory-physical.html": "stock",
     "/inventory-tax-prep.html": "tax",
     "/inventory-loan.html": "loan",
     "/settings.html": "settings",

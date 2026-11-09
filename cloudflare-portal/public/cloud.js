@@ -57,6 +57,7 @@
       ["Treasure Hunt", "/pc-only.html?f=treasure", "manager", true],
     ]],
     ["Owner", [
+      ["Physical Inventory", "/inventory-physical.html", "owner"],
       ["Tax Prep", "/inventory-tax-prep.html", "owner"],
       ["Loan", "/inventory-loan.html", "owner"],
       ["Store Settings", "/settings.html", "owner"],
@@ -91,6 +92,10 @@
       shadow: ["#mkSync", "[data-act=approved]", "[data-act=posted]", "[data-act=rejected]", "[data-paid]", "[data-cancel]"],
       pc: ["[data-short]"],
       minRole: { "#mkSync": "owner", "section:has(#taxReport)": "owner" },
+    },
+    "/inventory-physical.html": {
+      pc: ["#physRefreshBtn"],
+      note: "Snapshot as last copied from the PC. Re-compare sheet runs on the PC portal.",
     },
     "/inventory-tax-prep.html": {
       pc: [".tax-snapshot-btn", ".tax-add-row-btn", ".tax-save-section-btn", ".tax-add-expense-btn", ".tax-del-row-btn", "section.tax-section table input", "section.tax-section table select"],

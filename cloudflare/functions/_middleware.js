@@ -11,10 +11,14 @@ export async function onRequest(context) {
     changed = true;
   }
 
-  // Legacy .html paths → extensionless canonicals (absolute URL, 301).
-  if (/\.html$/i.test(url.pathname)) {
-    url.pathname = url.pathname.replace(/\.html$/i, "");
-    if (!url.pathname) url.pathname = "/";
+  // /index and /index.html → / in one hop (avoid /index.html → /index → /).
+  const pathLower = url.pathname.toLowerCase();
+  if (pathLower === "/index" || pathLower === "/index.html") {
+    url.pathname = "/";
+    changed = true;
+  } else if (/\.html$/i.test(url.pathname)) {
+    // Legacy .html paths → extensionless canonicals (absolute URL, 301).
+    url.pathname = url.pathname.replace(/\.html$/i, "") || "/";
     changed = true;
   }
 

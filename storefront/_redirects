@@ -1,4 +1,6 @@
 # Clean permanent redirects so Google sees a single hop to canonical URLs.
+/index.html /  301
+/index      /  301
 /info.html  /info  301
 /about.html /about 301
 /links.html /links 301

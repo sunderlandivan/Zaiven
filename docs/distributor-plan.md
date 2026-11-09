@@ -72,6 +72,28 @@ Most authorized hobby distributors have closed new accounts to online-only selle
 
 **Watchlist (re-check quarterly):** PHD/Peachstate (reopening "in the fall", brick-and-mortar only), Southern Hobby, Universal US, Mad Al, Asmodee USA. The first four were each asked on 2026-10-07 about an online/e-commerce path; tracking is in the kit README.
 
+### Online-intake / soft-market watch (added 2026-11-02)
+
+**Scope (owner, 2026-11-02):** stick to **US suppliers**, or at least sources that can supply **English-language** product for the US store. Do not pitch UK/EU wholesale as a substitute for authorized US distributors unless the owner asks.
+
+Owner note: TCG may be entering a softer / bear phase; some distributors reportedly reaching out on **pallet / overstock unloads**. That can precede reopening new accounts — **do not mass-reapply yet**; watch public pages and any inbound sales email to `sales@`. Baseline check **2026-11-02** (no reopen signals for online-only):
+
+| Watch | URL / signal | Status 2026-11-02 | What would change the advice |
+|---|---|---|---|
+| **Sweet Deal** | [sweetd.com](https://sweetd.com/) homepage copy | Still B&M / OTS only; “Online retailers should check this site for news…” | Any homepage/news post that online apps are open |
+| **Gold River** | [account/register](https://goldriverdistributors.com/account/register) | **Registration temporarily closed** | Register page accepts sign-ups again |
+| **PHD / Peachstate** | [open-an-account](https://www.phdgames.com/open-an-account-with-phd/), [contact](https://www.phdgames.com/contact/) | Gaming apps paused; when resume = **LGS only**; online-only still refused | Explicit online path, or pause lifted *and* online language softens |
+| **Southern Hobby** | [new_account.php](https://www.southernhobby.com/new_account.php) | Online-only / warehouse / office “will not be considered” | Policy text removes online ban |
+| **GTS** | [open account](https://www.gtsdistribution.com/info/open-a-gts-business-account.asp) + domestic pre-screen | Still B&M / breaker style path (no internet retailer reopen announced) | Pre-screen adds online retailer / website-only |
+| **Universal US** | [us.universaldist.com/register](https://us.universaldist.com/register) | Previously: not entertaining online-only | Register copy changes |
+| **Mad Al** | [madal.com FAQ](https://www.madal.com/faq-frequently-asked-questions) | B&M only; no Pokémon for new accounts | FAQ allows online and/or Pokémon for new |
+| **ACD** | Existing thread (`MichaelC@acdd.com`) | Already the open online path (needs live site — we have it); Oct application follow-up was cold (“overwhelming applications”) | Unsolicited restock / reopen email, or Mike replies warmly |
+| **MichiganHobby** | [michiganhobby.com](https://www.michiganhobby.com/) waitlist / wholesale | Still the best *remaining* Pokémon-ish lead if waitlist opens | Waitlist / wholesale form actively inviting |
+
+**Also watch (not “reapply”):** inbound emails pitching **pallet / case lots / overstock** from known distributors — forward into the kit README outreach table; verify legitimacy (SOS entity, invoice, no wire-only) before any buy. Soft market ≠ authorized allocation opening.
+
+**Cadence:** re-check the table **monthly** (or sooner if pallet outreach shows up). Log date + one-line status in this section.
+
 **Only if we open a storefront** (even a small retail suite): Southern Hobby, Universal, PHD, Mad Al, WPN → Authorized Internet Retailer (unlocks sealed Magic online), Play! Pokémon, Bandai TCG+, Flesh and Blood. A real storefront open at least 35 hrs/week opens almost every door, so it's worth costing out against the margin gap between distributor and secondary-market pricing.
 
 ### Secondary, import, and accessory options

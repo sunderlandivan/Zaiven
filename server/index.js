@@ -30,7 +30,9 @@ import {
   getSalesMatches,
 } from "./inventorySales.js";
 import { getTaxPrepReport, saveTaxPrepSection, snapshotInventoryForTaxYear } from "./taxPrep.js";
+import { getPhysicalInventoryReport } from "./physicalInventory.js";
 import { importYearSheets } from "./yearSheetsImport.js";
+import { rebuildInventoryFromSheet } from "./rebuildInventoryFromSheet.js";
 import { getLoanReport, updateLoanMeta, addLoanPayment, deleteLoanPayment } from "./loan.js";
 import {
   getSheetSyncSettings,
@@ -527,6 +529,16 @@ app.post("/api/orders/gmail/sync", async (req, res) => {
   }
 });
 
+app.get("/api/physical-inventory", async (req, res) => {
+  try {
+    const refresh = String(req.query?.refresh || "") === "1";
+    const data = await getPhysicalInventoryReport({ refresh });
+    res.json({ ok: true, data });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
 app.get("/api/tax-prep", (req, res) => {
   try {
     const year = Number(req.query?.year) || new Date().getFullYear();
@@ -570,6 +582,16 @@ app.post("/api/inventory/import-year-sheets", (req, res) => {
       clearSalesLedger: body.clearSalesLedger !== false,
     });
     res.json({ ok: true, result });
+  } catch (error) {
+    res.status(400).json({ ok: false, error: error.message });
+  }
+});
+
+app.post("/api/inventory/rebuild-from-sheet", async (req, res) => {
+  try {
+    const clearSalesLedger = req.body?.clearSalesLedger !== false;
+    const result = await rebuildInventoryFromSheet({ clearSalesLedger });
+    res.json({ ok: true, result, data: getInventoryStockView() });
   } catch (error) {
     res.status(400).json({ ok: false, error: error.message });
   }

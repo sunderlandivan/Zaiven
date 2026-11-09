@@ -10,6 +10,7 @@ alwaysApply: true
 - **Never price below cost + fees.** Every proposal must show cost, fees (TCGplayer ~13%, PayPal, shipping), proposed price and resulting profit; anything that would lose money is excluded, not just flagged.
 - **Owner-reviewed prices are locked.** Prices the owner has reviewed/kept (see `docs/price-proposal-2026-10-09.md` "Owner decisions") must never be changed by any automation, floor, or clamp, up or down. Only the owner's explicit OK changes them. Automatic floors are a warning/safety check for those items, never an override.
 - **Minimum profit:** existing items must clear **≥15% profit on cost**. **New items** (added after the Oct 9, 2026 review) may go as low as **≥10%**. Profit is always computed after **PayPal fees (3.49% of price + shipping + worst-case CA sales tax, + $0.49), shipping label cost minus shipping charged, and taxes** (tax is pass-through, never income).
+- **TCGplayer shipping (buyer-paid, Standard US):** Small **$1.27**, Medium **$6.99**, Large **$10.99** (boxes), Extra Large **$24.99** (cases). Free Shipping / In-Store Pickup inactive. See `shipping.tcgplayer` in `data/store-settings.json`. Net ship = label − amount charged.
 - **Cost baseline = the highest unit cost** among all of an item's rows (Inventory26 and any older stock), never a blended/average or lowest cost. Profit, break-even and floors are always computed from that highest cost.
 - Discount codes, sales, and "X% under market" changes count as price changes.
 - Agents may *prepare* proposals and drafts freely; applying them is the owner's call.

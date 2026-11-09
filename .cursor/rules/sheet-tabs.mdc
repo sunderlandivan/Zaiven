@@ -7,3 +7,8 @@ alwaysApply: true
 - **Sold 2025 is locked** (closed year). Never write, edit, or delete anything on it.
 - **Inventory25 may be adjusted** (e.g. sales intake lowering Qty for older stock still on hand). Treat it like Inventory26 for stock changes.
 - New sales are logged only to **Sold 2026**.
+
+## Physical inventory (Nov 3–4, 2026)
+
+- When the photo walkthrough finishes, **compare final qtys to the original sheet** before this count: `data/physical-inventory-baseline-pre-2026-11-03.json`.
+- Do not skip that diff — owner wants before vs after.

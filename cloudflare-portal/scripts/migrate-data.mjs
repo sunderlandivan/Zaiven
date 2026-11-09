@@ -17,7 +17,7 @@ const STATE_FILES = [
   "store-stock", "store-settings", "store-price-review", "store-publish-state", "web-orders",
   "sheet-sync-settings", "sheet-sync-queue", "sheet-sync-aliases", "orders-sync-settings",
   "loan-db", "tax-prep-db", "treasure-hunt-db", "tcgplayer-single-ids", "tcgplayer-listings",
-  "marketing-drafts", "marketing-insights-state",
+  "marketing-drafts", "marketing-insights-state", "physical-inventory-diff-live",
 ];
 
 function loadDocs() {

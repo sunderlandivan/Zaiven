@@ -512,6 +512,9 @@ function estimateShipping(event) {
   const sealed = event.lines.filter((l) => l.plan?.action === "sell" || !looksLikeSingle(l.description));
   if (sealed.length) {
     if (event.orderGross - 6.99 < 50) return 6.99;
+    // Big sealed / case orders on TCGplayer are usually the $24.99 rate, not the $10.99 display rate.
+    const looksCase = sealed.some((l) => /\bcase\b/i.test(String(l.description || "")));
+    if (looksCase || Number(event.orderGross) >= 500) return 24.99;
     return Math.max(...sealed.map((l) => Number(l.plan?.stockRow?.calcShipping) || 10.99));
   }
   return event.orderGross - 1.49 < 5 ? 1.49 : 1.27;
@@ -813,8 +816,18 @@ export async function resolveSheetEvent(eventId, { lines = [], apply = true } = 
   for (const edit of lines) {
     const line = ev.lines[edit.index];
     if (!line || line.applied) continue;
+    const prevQty = Math.max(1, Number(line.qty) || 1);
+    const prevUnit = Number(line.unitPrice) || 0;
     for (const k of ["qty", "unitCost", "unitPrice", "fees", "shipping", "cost"]) {
       if (edit[k] !== undefined && edit[k] !== "") line[k] = Number(edit[k]);
+    }
+    // If qty changes without an explicit new unit price (e.g. case → 6 displays), keep the
+    // line's product total and divide — otherwise case price gets applied per unit.
+    if (edit.qty !== undefined && edit.qty !== "" && (edit.unitPrice === undefined || edit.unitPrice === "")) {
+      const nextQty = Math.max(1, Number(line.qty) || 1);
+      if (nextQty !== prevQty && prevUnit > 0) {
+        line.unitPrice = round2((prevUnit * prevQty) / nextQty);
+      }
     }
     if (edit.itemId) line.soldItemId = String(edit.itemId).trim();
     const action = edit.action;
@@ -824,6 +837,10 @@ export async function resolveSheetEvent(eventId, { lines = [], apply = true } = 
       );
       if (!row) throw new Error(`Pick a sheet row for "${line.description}".`);
       rememberAlias(line.description, row.itemId);
+      // Cost basis = highest unit cost among all stock rows for this item (owner pricing rule).
+      const same = stockRows.filter((r) => r.itemId === row.itemId);
+      const maxCost = Math.max(...same.map((r) => Number(r.cost) || 0), Number(row.cost) || 0);
+      if (action === "sell" && maxCost > 0) line.cost = maxCost;
       line.plan = action === "raise" ? { action, targetItemId: row.itemId, locked: true } : { action, stockRow: row, locked: true };
     } else if (action === "new") {
       const template = edit.targetItemId ? stockRows.find((r) => r.itemId === edit.targetItemId) : null;

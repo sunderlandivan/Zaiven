@@ -62,7 +62,7 @@ Day-to-day: diagnose → change repo/data/Sheet carefully → restart/deploy →
 1. **Sold 2025 locked** — no writes.
 2. **Inventory25** adjustable; **new sales → Sold 2026 only**.
 3. **No price changes** without explicit owner OK. Audit → propose (cost, fees, profit) → wait → apply. Never below cost+fees. Cost = **highest** unit cost across rows. Existing ≥**15%** profit on cost after fees; new ≥**10%**. Locked decisions: `docs/price-proposal-2026-10-09.md`.
-4. Fees model: PayPal **3.49%** of (price + shipping charged + worst-case CA tax) + **$0.49**; shipping label − shipping charged; tax is pass-through. TCGplayer ~**13%** when quoting TCG.
+4. Fees model: PayPal **3.49%** of (price + shipping charged + worst-case CA tax) + **$0.49**; shipping label − shipping charged; tax is pass-through. TCGplayer ~**13%** when quoting TCG. **TCG Standard ship (buyer-paid):** Small **$1.27**, Medium **$6.99**, Large **$10.99**, XL **$24.99** (`store-settings.json` → `shipping.tcgplayer`).
 5. **MC:** do not change business name / website / business info during reviews.
 6. **Custom decks:** on-site OK; **never** in `feed.xml`, sitemap, or Product JSON-LD; keep **noindex** (`cloudflare/lib/catalog.js`).
 7. Never commit `data/*.json`, credentials, oauth tokens, or transfer `set-user-env.ps1`.
@@ -90,19 +90,21 @@ Merchant Center  ←  https://preeminentstore.com/feed.xml  (no custom decks)
 
 ## 5) Status inherited from previous console (2026-10-26)
 
-### Merchant Center — Counterfeit (active)
+### Merchant Center — Counterfeit (**CLEARED Oct 31, 2026**)
 
-- Suspended for Counterfeit; Oct 16 review **rejected** (decks still crawlable).
-- Oct 26 hardening deployed: feed exclude decks, sitemap omit deck URLs, deck PDPs **noindex** / no Product LD; **new review requested Oct 26**.
-- Full log + appeal language: `docs/merchant-center-counterfeit-2026-10-16.md`.
-- Identity / invoice requests → **owner only**. Do not put decks back on Shopping surfaces.
+- Google email Oct 31: review of suspended account (counterfeit) **complete**; issue **no longer appears** on MC account `5871019770`.
+- **Nov 1 check:** Overview healthy — **296 approved / 0 limited / 0 not approved / 0 under review**; Needs attention + account policy issues empty. Live feed `preeminentstore.com/feed.xml` **296 items, 0 decks**; sitemap **0 deck- URLs**.
+- Keep decks off Shopping (feed / sitemap / Product LD / noindex) — do not put custom decks back on Shopping surfaces.
+- Full log: `docs/merchant-center-counterfeit-2026-10-16.md`.
 - Prior Misrepresentation issue was cleared earlier (`docs/merchant-center-misrepresentation-2026-10-13.md`).
 
 ### Site / GSC / GCR
 
-- www → apex **single-hop** 301; `.html` → clean URLs.
+- www → apex **single-hop** 301; `.html` → clean URLs; `/index.html` → `/` one hop.
 - Google Customer Reviews opt-in on PayPal thank-you.
 - GSC “Page with redirect” on intentional redirects = expected.
+- GSC single 404 was Cloudflare `/cdn-cgi/l/email-protection` — Email Address Obfuscation turned **off** (site already uses `<!--email_off-->`); Validate Fix started Nov 9, 2026.
+- Staff Inventory: rebuild from live Sheet with `node scripts/rebuild-inventory-from-sheet.mjs` or `POST /api/inventory/rebuild-from-sheet` (not the old Excel snapshot).
 
 ### Physical inventory (~30%)
 
@@ -120,6 +122,7 @@ Photos: `OneDrive\Pictures\Inventory`
 | Knock Out | 1 |
 | Perfect Order | 2 PC + 1 regular |
 | MTG sealed | play case = **1** unit |
+| Costco 6-Pack Poké Balls (685924) | **0** intact 6-packs — physical count: **4 loose balls only** (not sellable as 6-pack) |
 
 Continue remaining batches → confirm → Sheet + stock.
 
@@ -127,7 +130,14 @@ Continue remaining batches → confirm → Sheet + stock.
 
 - Oct 9 audit: **no prices changed**; owner decisions locked in `docs/price-proposal-2026-10-09.md`.
 - Raise-after-sale: propose on Marketing (`raiseAfterSale` in `data/store-settings.json`); never auto-apply.
-- Open listing / TCG raise checklist: `docs/store-todo.md`.
+- Open listing / TCG raise checklist: `docs/store-todo.md` (Oct 30 gap review: no new TCG listings worth pitching).
+
+### Distributors — soft-market watch (do not mass-reapply)
+
+- Hypothesis (owner, Nov 2026): softer TCG market / pallet unloads may precede reopening online intake.
+- **Scope:** US suppliers (or English-product sources for the US store only). No UK/EU wholesale substitute pitches unless asked.
+- Watchlist + baseline: `docs/distributor-plan.md` § “Online-intake / soft-market watch”. Priority pages: Sweet Deal news, Gold River register, PHD open-account, Southern Hobby, GTS.
+- Flag any inbound distributor email about pallets/overstock or “now accepting online.” No cold re-spam.
 
 ### Contact / brand
 
